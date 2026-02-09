@@ -65,6 +65,18 @@ output "kubeconfigs" {
   sensitive   = true
 }
 
+# ─── Node Pool Outputs ──────────────────────────────────────────────
+
+output "nodepool_manifests" {
+  description = "Map of node pool keys to their generated YAML manifests"
+  value       = local.nodepool_manifests
+}
+
+output "nodepool_names" {
+  description = "Map of node pool keys to their names"
+  value       = { for k, v in var.node_pools : k => v.name }
+}
+
 # ─── Quotas Outputs ──────────────────────────────────────────────────
 
 output "quotas" {

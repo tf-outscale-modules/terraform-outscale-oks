@@ -74,6 +74,37 @@ module "oks" {
     }
   }
 
+  node_pools = {
+    workers = {
+      name               = "worker-pool"
+      cluster_key        = "main"
+      node_type          = "tinav6.c2r4p3"
+      desired_nodes      = 2
+      zones              = ["eu-west-2a", "eu-west-2b"]
+      enable_autoscaling = true
+      min_nodes          = 2
+      max_nodes          = 10
+      volumes = [{
+        device = "/dev/sda1"
+        type   = "gp2"
+        size   = 50
+      }]
+    }
+    gpu = {
+      name          = "gpu-pool"
+      cluster_key   = "main"
+      node_type     = "tinav6.c2r4p3"
+      desired_nodes = 1
+      zones         = ["eu-west-2a"]
+      extra_spec = {
+        fgpu = {
+          model          = "nvidia-p6"
+          "k8s-operator" = true
+        }
+      }
+    }
+  }
+
   enable_quotas = false
 
   tags = {
