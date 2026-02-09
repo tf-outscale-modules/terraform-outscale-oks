@@ -41,7 +41,7 @@ module "oks" {
   project_name        = "complete-example"
   project_cidr        = "10.0.0.0/16"
   region              = "eu-west-2"
-  project_description = "Production-grade OKS deployment with full features"
+  project_description = "Production OKS with full features"
 
   enable_project_api_termination_protection = true
 

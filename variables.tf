@@ -90,9 +90,14 @@ variable "admin_whitelist" {
 # ─── Project Variables (Optional) ────────────────────────────────────
 
 variable "project_description" {
-  description = "Description of the OKS project"
+  description = "Description of the OKS project (max 40 characters)"
   type        = string
   default     = null
+
+  validation {
+    condition     = var.project_description == null || length(var.project_description) <= 40
+    error_message = "project_description must be 40 characters or fewer."
+  }
 }
 
 variable "enable_project_api_termination_protection" {
