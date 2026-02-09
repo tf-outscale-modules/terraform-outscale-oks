@@ -1,93 +1,168 @@
-# Outscale Cloud Native
+# Outscale Cloud Native Terraform Module
 
+[![Apache 2.0][apache-shield]][apache]
+[![Terraform][terraform-badge]][terraform-url]
+[![Outscale Provider][provider-badge]][provider-url]
+[![Latest Release][release-badge]][release-url]
 
+Terraform module for provisioning and managing Outscale Kubernetes Service (OKS) infrastructure.
 
-## Getting started
+## Features
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- OKS project management with configurable CIDR and region
+- Kubernetes cluster provisioning with version selection
+- Control plane sizing and multi-AZ deployment
+- Admin API whitelist for secure access control
+- Kubeconfig retrieval with configurable TTL
+- Account quota monitoring
+- API termination protection for production workloads
+- Flexible tagging with common and resource-specific tags
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## Requirements
 
-## Add your files
-
-* [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-* [Set up project integrations](https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native/-/settings/integrations)
-
-## Collaborate with your team
-
-* [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+| Name | Version |
+|------|---------|
+| Terraform / OpenTofu | >= 1.10 |
+| Outscale Provider | ~> 1.3 |
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Basic Example
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```hcl
+module "oks" {
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.1.0"
+
+  project_name = "my-project"
+  project_cidr = "10.0.0.0/16"
+  region       = "eu-west-2"
+
+  cluster_name       = "my-cluster"
+  kubernetes_version = "1.31"
+  cidr_pods          = "10.91.0.0/16"
+  cidr_service       = "10.92.0.0/16"
+  admin_whitelist    = ["203.0.113.0/24"]
+}
+```
+
+### Complete Example
+
+```hcl
+module "oks" {
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.1.0"
+
+  # Project
+  project_name        = "production"
+  project_cidr        = "10.0.0.0/16"
+  region              = "eu-west-2"
+  project_description = "Production OKS environment"
+
+  enable_project_api_termination_protection = true
+
+  # Cluster
+  cluster_name       = "prod-cluster"
+  kubernetes_version = "1.31"
+  cidr_pods          = "10.91.0.0/16"
+  cidr_service       = "10.92.0.0/16"
+  admin_whitelist    = ["203.0.113.0/24", "198.51.100.10/32"]
+
+  control_planes     = "cp.3.masters.medium"
+  enable_cp_multi_az = true
+  enable_admin_lbu   = true
+
+  enable_cluster_api_termination_protection = true
+
+  # Kubeconfig
+  enable_kubeconfig = true
+  kubeconfig_ttl    = "24h"
+
+  # Quotas
+  enable_quotas = true
+
+  # Tags
+  tags = {
+    Environment = "production"
+    Team        = "platform"
+  }
+}
+```
+
+### Conditional Creation
+
+```hcl
+module "oks" {
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.1.0"
+
+  project_name = "my-project"
+  project_cidr = "10.0.0.0/16"
+  region       = "eu-west-2"
+
+  cluster_name       = "my-cluster"
+  kubernetes_version = "1.31"
+  cidr_pods          = "10.91.0.0/16"
+  cidr_service       = "10.92.0.0/16"
+  admin_whitelist    = ["10.0.0.0/8"]
+
+  # Disable kubeconfig retrieval (manage credentials separately)
+  enable_kubeconfig = false
+
+  # Enable quota monitoring
+  enable_quotas = true
+}
+```
+
+## Security Considerations
+
+1. Never use `0.0.0.0/0` in `admin_whitelist` for production environments
+2. The `kubeconfig` output is marked as `sensitive` to prevent accidental exposure
+3. Enable API termination protection for production projects and clusters
+4. State files contain kubeconfig in plaintext — use encrypted remote backends
+5. See [SECURITY.md](SECURITY.md) for detailed security guidelines
+
+## Known Limitations
+
+1. The Outscale provider OKS resources are from v1.3.0-alpha.1 — the API may evolve
+2. The module does not validate that `project_cidr`, `cidr_pods`, and `cidr_service` do not overlap
+3. Node pool management is not yet supported (planned for Phase 2)
+
+<!-- BEGIN_TF_DOCS -->
+<!-- END_TF_DOCS -->
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [README.md](README.md) | This file |
+| [SECURITY.md](SECURITY.md) | Security guidelines and best practices |
+| [TESTING.md](TESTING.md) | Testing strategy and instructions |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Contributions are welcome. Please ensure your changes:
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+1. Pass `tofu fmt -check -recursive`
+2. Pass `tofu validate`
+3. Pass `tflint --recursive`
+4. Include tests for new features
+5. Update documentation as needed
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Apache 2.0 — see [LICENSE](LICENSE) for details.
+
+## Disclaimer
+
+This module is provided "as is" without warranty of any kind. Use at your own risk.
+
+[apache]: https://opensource.org/licenses/Apache-2.0
+[apache-shield]: https://img.shields.io/badge/License-Apache%202.0-blue.svg
+
+[terraform-badge]: https://img.shields.io/badge/Terraform-%3E%3D1.10-623CE4
+[terraform-url]: https://www.terraform.io
+
+[provider-badge]: https://img.shields.io/badge/Outscale%20Provider-~%3E1.3-orange
+[provider-url]: https://registry.terraform.io/providers/outscale/outscale/latest
+
+[release-badge]: https://img.shields.io/gitlab/v/release/leminnov/terraform/modules/outscale-cloud-native?include_prereleases&sort=semver
+[release-url]: https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native/-/releases
