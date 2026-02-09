@@ -1,10 +1,12 @@
 resource "outscale_oks_project" "this" {
-  name   = var.project_name
-  cidr   = var.project_cidr
-  region = var.region
+  for_each = var.projects
 
-  description             = var.project_description
-  disable_api_termination = var.enable_project_api_termination_protection
+  name   = each.value.name
+  cidr   = each.value.cidr
+  region = each.value.region
 
-  tags = local.project_tags
+  description             = each.value.description
+  disable_api_termination = each.value.enable_api_termination_protection
+
+  tags = local.project_tags[each.key]
 }

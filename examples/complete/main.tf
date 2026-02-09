@@ -37,46 +37,43 @@ module "networking" {
 module "oks" {
   source = "../../"
 
-  # Project
-  project_name        = "complete-example"
-  project_cidr        = "10.0.0.0/16"
-  region              = "eu-west-2"
-  project_description = "Production OKS with full features"
+  projects = {
+    main = {
+      name                              = "complete-example"
+      cidr                              = "10.0.0.0/16"
+      region                            = "eu-west-2"
+      description                       = "Production OKS with full features"
+      enable_api_termination_protection = true
+      tags = {
+        CostCenter = "infrastructure"
+      }
+    }
+  }
 
-  enable_project_api_termination_protection = true
+  clusters = {
+    main = {
+      name                              = "complete-cluster"
+      project_key                       = "main"
+      kubernetes_version                = "1.31"
+      cidr_pods                         = "10.91.0.0/16"
+      cidr_service                      = "10.92.0.0/16"
+      admin_whitelist                   = ["203.0.113.0/24", "198.51.100.10/32"]
+      control_planes                    = "cp.3.masters.medium"
+      description                       = "Multi-AZ production cluster"
+      enable_cp_multi_az                = true
+      enable_admin_lbu                  = true
+      enable_api_termination_protection = true
+      kubeconfig_ttl                    = "24h"
+      tags = {
+        Team = "platform"
+      }
+    }
+  }
 
-  # Cluster
-  cluster_name       = "complete-cluster"
-  kubernetes_version = "1.31"
-  cidr_pods          = "10.91.0.0/16"
-  cidr_service       = "10.92.0.0/16"
-  admin_whitelist    = ["203.0.113.0/24", "198.51.100.10/32"]
-
-  control_planes      = "cp.3.masters.medium"
-  enable_cp_multi_az  = true
-  enable_admin_lbu    = true
-  cluster_description = "Multi-AZ production cluster"
-
-  enable_cluster_api_termination_protection = true
-
-  # Kubeconfig
-  enable_kubeconfig = true
-  kubeconfig_ttl    = "24h"
-
-  # Quotas
   enable_quotas = true
 
-  # Tags
   tags = {
     Project     = "complete-example"
     Environment = "staging"
-  }
-
-  project_tags = {
-    CostCenter = "infrastructure"
-  }
-
-  cluster_tags = {
-    Team = "platform"
   }
 }

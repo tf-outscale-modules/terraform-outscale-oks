@@ -1,175 +1,108 @@
-# ─── Project Variables (Required) ────────────────────────────────────
+# ─── Projects ────────────────────────────────────────────────────────
 
-variable "project_name" {
-  description = "Name of the OKS project (2-40 chars, lowercase alphanumeric and hyphens, must start with letter and end with letter or number)"
-  type        = string
-
-  validation {
-    condition     = can(regex("^[a-z][a-z0-9-]*[a-z0-9]$", var.project_name)) && length(var.project_name) >= 2 && length(var.project_name) <= 40
-    error_message = "Project name must be 2-40 characters, lowercase alphanumeric and hyphens, start with a letter and end with a letter or number."
-  }
-}
-
-variable "project_cidr" {
-  description = "CIDR block to associate with the Net of the OKS project (e.g., '10.0.0.0/16')"
-  type        = string
+variable "projects" {
+  description = "Map of OKS projects to create. Keys are logical identifiers used to reference projects from clusters"
+  type = map(object({
+    name                              = string
+    cidr                              = string
+    region                            = string
+    description                       = optional(string)
+    enable_api_termination_protection = optional(bool, false)
+    tags                              = optional(map(string), {})
+  }))
 
   validation {
-    condition     = can(cidrhost(var.project_cidr, 0))
-    error_message = "project_cidr must be a valid CIDR notation (e.g., '10.0.0.0/16')."
-  }
-}
-
-variable "region" {
-  description = "Outscale region for the OKS project deployment (e.g., 'eu-west-2', 'cloudgouv-eu-west-1')"
-  type        = string
-
-  validation {
-    condition     = can(regex("^[a-z][a-z0-9-]+$", var.region))
-    error_message = "Region must be a valid Outscale region identifier (e.g., 'eu-west-2')."
-  }
-}
-
-# ─── Cluster Variables (Required) ────────────────────────────────────
-
-variable "cluster_name" {
-  description = "Name of the OKS cluster (2-40 chars, lowercase alphanumeric and hyphens, must start with letter and end with letter or number)"
-  type        = string
-
-  validation {
-    condition     = can(regex("^[a-z][a-z0-9-]*[a-z0-9]$", var.cluster_name)) && length(var.cluster_name) >= 2 && length(var.cluster_name) <= 40
-    error_message = "Cluster name must be 2-40 characters, lowercase alphanumeric and hyphens, start with a letter and end with a letter or number."
-  }
-}
-
-variable "kubernetes_version" {
-  description = "Kubernetes version to deploy for the OKS cluster (e.g., '1.31'). Use outscale_oks_quotas data source to list available versions"
-  type        = string
-
-  validation {
-    condition     = can(regex("^[0-9]+\\.[0-9]+", var.kubernetes_version))
-    error_message = "kubernetes_version must be a valid version string (e.g., '1.31')."
-  }
-}
-
-variable "cidr_pods" {
-  description = "CIDR block for the pod network (e.g., '10.91.0.0/16'). Must not overlap with project CIDR or service CIDR"
-  type        = string
-
-  validation {
-    condition     = can(cidrhost(var.cidr_pods, 0))
-    error_message = "cidr_pods must be a valid CIDR notation (e.g., '10.91.0.0/16')."
-  }
-}
-
-variable "cidr_service" {
-  description = "CIDR block for the service network (e.g., '10.92.0.0/16'). Must not overlap with project CIDR or pod CIDR"
-  type        = string
-
-  validation {
-    condition     = can(cidrhost(var.cidr_service, 0))
-    error_message = "cidr_service must be a valid CIDR notation (e.g., '10.92.0.0/16')."
-  }
-}
-
-variable "admin_whitelist" {
-  description = "List of CIDR blocks allowed to access the Kubernetes API server. Use specific ranges, never '0.0.0.0/0' in production"
-  type        = list(string)
-
-  validation {
-    condition     = length(var.admin_whitelist) > 0
-    error_message = "admin_whitelist must contain at least one CIDR block."
+    condition     = length(var.projects) > 0
+    error_message = "At least one project must be defined."
   }
 
   validation {
-    condition     = alltrue([for cidr in var.admin_whitelist : can(cidrhost(cidr, 0))])
-    error_message = "Each item in admin_whitelist must be a valid CIDR block (e.g., '203.0.113.0/24', '198.51.100.10/32')."
+    condition = alltrue([
+      for k, v in var.projects :
+      can(regex("^[a-z][a-z0-9-]*[a-z0-9]$", v.name)) && length(v.name) >= 2 && length(v.name) <= 40
+    ])
+    error_message = "Project names must be 2-40 characters, lowercase alphanumeric and hyphens, start with a letter and end with a letter or number."
   }
-}
-
-# ─── Project Variables (Optional) ────────────────────────────────────
-
-variable "project_description" {
-  description = "Description of the OKS project (max 40 characters)"
-  type        = string
-  default     = null
 
   validation {
-    condition     = var.project_description == null || length(var.project_description) <= 40
-    error_message = "project_description must be 40 characters or fewer."
+    condition     = alltrue([for k, v in var.projects : can(cidrhost(v.cidr, 0))])
+    error_message = "Project CIDRs must be valid CIDR notation (e.g., '10.0.0.0/16')."
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.projects : can(regex("^[a-z][a-z0-9-]+$", v.region))])
+    error_message = "Project regions must be valid Outscale region identifiers (e.g., 'eu-west-2')."
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.projects : v.description == null || length(v.description) <= 40])
+    error_message = "Project descriptions must be 40 characters or fewer."
   }
 }
 
-variable "enable_project_api_termination_protection" {
-  description = "Enable API termination protection for the OKS project. Set to true for production"
-  type        = bool
-  default     = false
+# ─── Clusters ────────────────────────────────────────────────────────
+
+variable "clusters" {
+  description = "Map of OKS clusters to create. Keys are logical identifiers. Each cluster references a project via project_key"
+  type = map(object({
+    name                              = string
+    project_key                       = string
+    kubernetes_version                = string
+    cidr_pods                         = string
+    cidr_service                      = string
+    admin_whitelist                   = list(string)
+    control_planes                    = optional(string, "cp.3.masters.small")
+    description                       = optional(string)
+    enable_cp_multi_az                = optional(bool, false)
+    enable_admin_lbu                  = optional(bool, false)
+    enable_api_termination_protection = optional(bool, false)
+    enable_kubeconfig                 = optional(bool, true)
+    kubeconfig_user                   = optional(string)
+    kubeconfig_group                  = optional(string)
+    kubeconfig_ttl                    = optional(string)
+    kubeconfig_x_encrypt_nacl         = optional(string)
+    tags                              = optional(map(string), {})
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for k, v in var.clusters :
+      can(regex("^[a-z][a-z0-9-]*[a-z0-9]$", v.name)) && length(v.name) >= 2 && length(v.name) <= 40
+    ])
+    error_message = "Cluster names must be 2-40 characters, lowercase alphanumeric and hyphens, start with a letter and end with a letter or number."
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.clusters : can(regex("^[0-9]+\\.[0-9]+", v.kubernetes_version))])
+    error_message = "Cluster kubernetes_version must be a valid version string (e.g., '1.31')."
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.clusters : can(cidrhost(v.cidr_pods, 0))])
+    error_message = "Cluster cidr_pods must be valid CIDR notation (e.g., '10.91.0.0/16')."
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.clusters : can(cidrhost(v.cidr_service, 0))])
+    error_message = "Cluster cidr_service must be valid CIDR notation (e.g., '10.92.0.0/16')."
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.clusters : length(v.admin_whitelist) > 0])
+    error_message = "Cluster admin_whitelist must contain at least one CIDR block."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.clusters :
+      alltrue([for cidr in v.admin_whitelist : can(cidrhost(cidr, 0))])
+    ])
+    error_message = "Each item in cluster admin_whitelist must be a valid CIDR block (e.g., '203.0.113.0/24')."
+  }
 }
 
-# ─── Cluster Variables (Optional) ────────────────────────────────────
-
-variable "cluster_description" {
-  description = "Description of the OKS cluster"
-  type        = string
-  default     = null
-}
-
-variable "control_planes" {
-  description = "Control plane sizing specification (e.g., 'cp.3.masters.small', 'cp.3.masters.medium')"
-  type        = string
-  default     = "cp.3.masters.small"
-}
-
-variable "enable_cp_multi_az" {
-  description = "Enable multi-AZ deployment for the control plane. Recommended for production workloads"
-  type        = bool
-  default     = false
-}
-
-variable "enable_admin_lbu" {
-  description = "Enable load balancer for Kubernetes API administration"
-  type        = bool
-  default     = false
-}
-
-variable "enable_cluster_api_termination_protection" {
-  description = "Enable API termination protection for the OKS cluster. Set to true for production"
-  type        = bool
-  default     = false
-}
-
-# ─── Data Source Variables ────────────────────────────────────────────
-
-variable "enable_kubeconfig" {
-  description = "Enable retrieval of the kubeconfig data source for the cluster"
-  type        = bool
-  default     = true
-}
-
-variable "kubeconfig_user" {
-  description = "User name for the kubeconfig credential"
-  type        = string
-  default     = null
-}
-
-variable "kubeconfig_group" {
-  description = "Group for the kubeconfig credential"
-  type        = string
-  default     = null
-}
-
-variable "kubeconfig_ttl" {
-  description = "Time-to-live for the kubeconfig token (e.g., '24h')"
-  type        = string
-  default     = null
-}
-
-variable "kubeconfig_x_encrypt_nacl" {
-  description = "NaCl public key for encrypting the kubeconfig. When set, the kubeconfig is returned encrypted"
-  type        = string
-  default     = null
-  sensitive   = true
-}
+# ─── Data Source Variables ───────────────────────────────────────────
 
 variable "enable_quotas" {
   description = "Enable retrieval of OKS account quotas data source"
@@ -177,22 +110,10 @@ variable "enable_quotas" {
   default     = false
 }
 
-# ─── Tag Variables ────────────────────────────────────────────────────
+# ─── Tag Variables ───────────────────────────────────────────────────
 
 variable "tags" {
   description = "Tags to apply to all OKS resources. Merged with module-managed tags"
-  type        = map(string)
-  default     = {}
-}
-
-variable "project_tags" {
-  description = "Additional tags to apply only to the OKS project. Merged with common tags"
-  type        = map(string)
-  default     = {}
-}
-
-variable "cluster_tags" {
-  description = "Additional tags to apply only to the OKS cluster. Merged with common tags"
   type        = map(string)
   default     = {}
 }

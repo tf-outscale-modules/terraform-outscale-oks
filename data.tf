@@ -1,12 +1,12 @@
 data "outscale_oks_kubeconfig" "this" {
-  count = var.enable_kubeconfig ? 1 : 0
+  for_each = local.kubeconfig_clusters
 
-  cluster_id = outscale_oks_cluster.this.id
+  cluster_id = outscale_oks_cluster.this[each.key].id
 
-  user           = var.kubeconfig_user
-  group          = var.kubeconfig_group
-  ttl            = var.kubeconfig_ttl
-  x_encrypt_nacl = var.kubeconfig_x_encrypt_nacl
+  user           = each.value.kubeconfig_user
+  group          = each.value.kubeconfig_group
+  ttl            = each.value.kubeconfig_ttl
+  x_encrypt_nacl = each.value.kubeconfig_x_encrypt_nacl
 }
 
 data "outscale_oks_quotas" "this" {

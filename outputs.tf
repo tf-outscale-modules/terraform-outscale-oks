@@ -1,67 +1,67 @@
 # ─── Project Outputs ─────────────────────────────────────────────────
 
-output "project_id" {
-  description = "ID of the OKS project"
-  value       = outscale_oks_project.this.id
+output "project_ids" {
+  description = "Map of project keys to their IDs"
+  value       = { for k, v in outscale_oks_project.this : k => v.id }
 }
 
-output "project_name" {
-  description = "Name of the OKS project"
-  value       = outscale_oks_project.this.name
+output "project_names" {
+  description = "Map of project keys to their names"
+  value       = { for k, v in outscale_oks_project.this : k => v.name }
 }
 
-output "project_status" {
-  description = "Current status of the OKS project"
-  value       = try(outscale_oks_project.this.status, null)
+output "project_statuses" {
+  description = "Map of project keys to their current statuses"
+  value       = { for k, v in outscale_oks_project.this : k => try(v.status, null) }
 }
 
 output "project_created_at" {
-  description = "Creation timestamp of the OKS project"
-  value       = try(outscale_oks_project.this.created_at, null)
+  description = "Map of project keys to their creation timestamps"
+  value       = { for k, v in outscale_oks_project.this : k => try(v.created_at, null) }
 }
 
 output "project_updated_at" {
-  description = "Last update timestamp of the OKS project"
-  value       = try(outscale_oks_project.this.updated_at, null)
+  description = "Map of project keys to their last update timestamps"
+  value       = { for k, v in outscale_oks_project.this : k => try(v.updated_at, null) }
 }
 
 # ─── Cluster Outputs ─────────────────────────────────────────────────
 
-output "cluster_id" {
-  description = "ID of the OKS cluster"
-  value       = outscale_oks_cluster.this.id
+output "cluster_ids" {
+  description = "Map of cluster keys to their IDs"
+  value       = { for k, v in outscale_oks_cluster.this : k => v.id }
 }
 
-output "cluster_name" {
-  description = "Name of the OKS cluster"
-  value       = outscale_oks_cluster.this.name
+output "cluster_names" {
+  description = "Map of cluster keys to their names"
+  value       = { for k, v in outscale_oks_cluster.this : k => v.name }
 }
 
-output "cluster_version" {
-  description = "Kubernetes version deployed on the cluster"
-  value       = outscale_oks_cluster.this.version
+output "cluster_versions" {
+  description = "Map of cluster keys to their Kubernetes versions"
+  value       = { for k, v in outscale_oks_cluster.this : k => v.version }
 }
 
 output "cluster_statuses" {
-  description = "Current statuses of the OKS cluster"
-  value       = outscale_oks_cluster.this.statuses
+  description = "Map of cluster keys to their current statuses"
+  value       = { for k, v in outscale_oks_cluster.this : k => v.statuses }
 }
 
 output "cluster_dns" {
-  description = "DNS endpoint of the OKS cluster API server"
-  value       = try(outscale_oks_cluster.this.cluster_dns, null)
+  description = "Map of cluster keys to their DNS endpoints"
+  value       = { for k, v in outscale_oks_cluster.this : k => try(v.cluster_dns, null) }
 }
 
 output "cluster_cni" {
-  description = "Container Network Interface (CNI) plugin used by the cluster"
-  value       = try(outscale_oks_cluster.this.cni, null)
+  description = "Map of cluster keys to their CNI plugins"
+  value       = { for k, v in outscale_oks_cluster.this : k => try(v.cni, null) }
 }
 
 # ─── Kubeconfig Outputs ─────────────────────────────────────────────
 
-output "kubeconfig" {
-  description = "Kubeconfig file content for accessing the OKS cluster. Contains sensitive credentials"
-  value       = try(data.outscale_oks_kubeconfig.this[0].kubeconfig, null)
+output "kubeconfigs" {
+  description = "Map of cluster keys to their kubeconfig contents (only for clusters with enable_kubeconfig = true)"
+  value       = { for k, v in data.outscale_oks_kubeconfig.this : k => v.kubeconfig }
   sensitive   = true
 }
 

@@ -9,14 +9,14 @@ Terraform module for provisioning and managing Outscale Kubernetes Service (OKS)
 
 ## Features
 
-- OKS project management with configurable CIDR and region
-- Kubernetes cluster provisioning with version selection
+- Multiple OKS projects and clusters via `map(object(...))` with `for_each`
+- Cluster-to-project linking via `project_key` references
 - Control plane sizing and multi-AZ deployment
 - Admin API whitelist for secure access control
-- Kubeconfig retrieval with configurable TTL
+- Per-cluster kubeconfig retrieval with configurable TTL
 - Account quota monitoring
 - API termination protection for production workloads
-- Flexible tagging with common and resource-specific tags
+- Flexible tagging with common and per-resource tags
 
 ## Requirements
 
@@ -31,17 +31,26 @@ Terraform module for provisioning and managing Outscale Kubernetes Service (OKS)
 
 ```hcl
 module "oks" {
-  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.1.0"
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.2.0"
 
-  project_name = "my-project"
-  project_cidr = "10.0.0.0/16"
-  region       = "eu-west-2"
+  projects = {
+    main = {
+      name   = "my-project"
+      cidr   = "10.0.0.0/16"
+      region = "eu-west-2"
+    }
+  }
 
-  cluster_name       = "my-cluster"
-  kubernetes_version = "1.31"
-  cidr_pods          = "10.91.0.0/16"
-  cidr_service       = "10.92.0.0/16"
-  admin_whitelist    = ["203.0.113.0/24"]
+  clusters = {
+    main = {
+      name               = "my-cluster"
+      project_key        = "main"
+      kubernetes_version = "1.31"
+      cidr_pods          = "10.91.0.0/16"
+      cidr_service       = "10.92.0.0/16"
+      admin_whitelist    = ["203.0.113.0/24"]
+    }
+  }
 }
 ```
 
@@ -49,37 +58,38 @@ module "oks" {
 
 ```hcl
 module "oks" {
-  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.1.0"
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.2.0"
 
-  # Project
-  project_name        = "production"
-  project_cidr        = "10.0.0.0/16"
-  region              = "eu-west-2"
-  project_description = "Production OKS environment"
+  projects = {
+    prod = {
+      name        = "production"
+      cidr        = "10.0.0.0/16"
+      region      = "eu-west-2"
+      description = "Production OKS environment"
+      enable_api_termination_protection = true
+      tags = { CostCenter = "infrastructure" }
+    }
+  }
 
-  enable_project_api_termination_protection = true
+  clusters = {
+    prod = {
+      name               = "prod-cluster"
+      project_key        = "prod"
+      kubernetes_version = "1.31"
+      cidr_pods          = "10.91.0.0/16"
+      cidr_service       = "10.92.0.0/16"
+      admin_whitelist    = ["203.0.113.0/24", "198.51.100.10/32"]
+      control_planes     = "cp.3.masters.medium"
+      enable_cp_multi_az = true
+      enable_admin_lbu   = true
+      enable_api_termination_protection = true
+      kubeconfig_ttl     = "24h"
+      tags = { Team = "platform" }
+    }
+  }
 
-  # Cluster
-  cluster_name       = "prod-cluster"
-  kubernetes_version = "1.31"
-  cidr_pods          = "10.91.0.0/16"
-  cidr_service       = "10.92.0.0/16"
-  admin_whitelist    = ["203.0.113.0/24", "198.51.100.10/32"]
-
-  control_planes     = "cp.3.masters.medium"
-  enable_cp_multi_az = true
-  enable_admin_lbu   = true
-
-  enable_cluster_api_termination_protection = true
-
-  # Kubeconfig
-  enable_kubeconfig = true
-  kubeconfig_ttl    = "24h"
-
-  # Quotas
   enable_quotas = true
 
-  # Tags
   tags = {
     Environment = "production"
     Team        = "platform"
@@ -87,26 +97,37 @@ module "oks" {
 }
 ```
 
-### Conditional Creation
+### Multiple Projects and Clusters
 
 ```hcl
 module "oks" {
-  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.1.0"
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.2.0"
 
-  project_name = "my-project"
-  project_cidr = "10.0.0.0/16"
-  region       = "eu-west-2"
+  projects = {
+    dev  = { name = "dev-project",  cidr = "10.0.0.0/16", region = "eu-west-2" }
+    prod = { name = "prod-project", cidr = "10.1.0.0/16", region = "eu-west-2" }
+  }
 
-  cluster_name       = "my-cluster"
-  kubernetes_version = "1.31"
-  cidr_pods          = "10.91.0.0/16"
-  cidr_service       = "10.92.0.0/16"
-  admin_whitelist    = ["10.0.0.0/8"]
+  clusters = {
+    dev = {
+      name               = "dev-cluster"
+      project_key        = "dev"
+      kubernetes_version = "1.31"
+      cidr_pods          = "10.91.0.0/16"
+      cidr_service       = "10.92.0.0/16"
+      admin_whitelist    = ["10.0.0.0/8"]
+      enable_kubeconfig  = false
+    }
+    prod = {
+      name               = "prod-cluster"
+      project_key        = "prod"
+      kubernetes_version = "1.31"
+      cidr_pods          = "10.93.0.0/16"
+      cidr_service       = "10.94.0.0/16"
+      admin_whitelist    = ["203.0.113.0/24"]
+    }
+  }
 
-  # Disable kubeconfig retrieval (manage credentials separately)
-  enable_kubeconfig = false
-
-  # Enable quota monitoring
   enable_quotas = true
 }
 ```
@@ -114,7 +135,7 @@ module "oks" {
 ## Security Considerations
 
 1. Never use `0.0.0.0/0` in `admin_whitelist` for production environments
-2. The `kubeconfig` output is marked as `sensitive` to prevent accidental exposure
+2. The `kubeconfigs` output is marked as `sensitive` to prevent accidental exposure
 3. Enable API termination protection for production projects and clusters
 4. State files contain kubeconfig in plaintext — use encrypted remote backends
 5. See [SECURITY.md](SECURITY.md) for detailed security guidelines
@@ -122,7 +143,7 @@ module "oks" {
 ## Known Limitations
 
 1. The Outscale provider OKS resources are from v1.3.0-alpha.1 — the API may evolve
-2. The module does not validate that `project_cidr`, `cidr_pods`, and `cidr_service` do not overlap
+2. The module does not validate that `cidr`, `cidr_pods`, and `cidr_service` do not overlap
 3. Node pool management is not yet supported (planned for Phase 2)
 
 <!-- BEGIN_TF_DOCS -->
@@ -156,47 +177,27 @@ No modules.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_admin_whitelist"></a> [admin\_whitelist](#input\_admin\_whitelist) | List of CIDR blocks allowed to access the Kubernetes API server. Use specific ranges, never '0.0.0.0/0' in production | `list(string)` | n/a | yes |
-| <a name="input_cidr_pods"></a> [cidr\_pods](#input\_cidr\_pods) | CIDR block for the pod network (e.g., '10.91.0.0/16'). Must not overlap with project CIDR or service CIDR | `string` | n/a | yes |
-| <a name="input_cidr_service"></a> [cidr\_service](#input\_cidr\_service) | CIDR block for the service network (e.g., '10.92.0.0/16'). Must not overlap with project CIDR or pod CIDR | `string` | n/a | yes |
-| <a name="input_cluster_description"></a> [cluster\_description](#input\_cluster\_description) | Description of the OKS cluster | `string` | `null` | no |
-| <a name="input_cluster_name"></a> [cluster\_name](#input\_cluster\_name) | Name of the OKS cluster (2-40 chars, lowercase alphanumeric and hyphens, must start with letter and end with letter or number) | `string` | n/a | yes |
-| <a name="input_cluster_tags"></a> [cluster\_tags](#input\_cluster\_tags) | Additional tags to apply only to the OKS cluster. Merged with common tags | `map(string)` | `{}` | no |
-| <a name="input_control_planes"></a> [control\_planes](#input\_control\_planes) | Control plane sizing specification (e.g., 'cp.3.masters.small', 'cp.3.masters.medium') | `string` | `"cp.3.masters.small"` | no |
-| <a name="input_enable_admin_lbu"></a> [enable\_admin\_lbu](#input\_enable\_admin\_lbu) | Enable load balancer for Kubernetes API administration | `bool` | `false` | no |
-| <a name="input_enable_cluster_api_termination_protection"></a> [enable\_cluster\_api\_termination\_protection](#input\_enable\_cluster\_api\_termination\_protection) | Enable API termination protection for the OKS cluster. Set to true for production | `bool` | `false` | no |
-| <a name="input_enable_cp_multi_az"></a> [enable\_cp\_multi\_az](#input\_enable\_cp\_multi\_az) | Enable multi-AZ deployment for the control plane. Recommended for production workloads | `bool` | `false` | no |
-| <a name="input_enable_kubeconfig"></a> [enable\_kubeconfig](#input\_enable\_kubeconfig) | Enable retrieval of the kubeconfig data source for the cluster | `bool` | `true` | no |
-| <a name="input_enable_project_api_termination_protection"></a> [enable\_project\_api\_termination\_protection](#input\_enable\_project\_api\_termination\_protection) | Enable API termination protection for the OKS project. Set to true for production | `bool` | `false` | no |
+| <a name="input_clusters"></a> [clusters](#input\_clusters) | Map of OKS clusters to create. Keys are logical identifiers. Each cluster references a project via project\_key | <pre>map(object({<br/>    name                              = string<br/>    project_key                       = string<br/>    kubernetes_version                = string<br/>    cidr_pods                         = string<br/>    cidr_service                      = string<br/>    admin_whitelist                   = list(string)<br/>    control_planes                    = optional(string, "cp.3.masters.small")<br/>    description                       = optional(string)<br/>    enable_cp_multi_az                = optional(bool, false)<br/>    enable_admin_lbu                  = optional(bool, false)<br/>    enable_api_termination_protection = optional(bool, false)<br/>    enable_kubeconfig                 = optional(bool, true)<br/>    kubeconfig_user                   = optional(string)<br/>    kubeconfig_group                  = optional(string)<br/>    kubeconfig_ttl                    = optional(string)<br/>    kubeconfig_x_encrypt_nacl         = optional(string)<br/>    tags                              = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
 | <a name="input_enable_quotas"></a> [enable\_quotas](#input\_enable\_quotas) | Enable retrieval of OKS account quotas data source | `bool` | `false` | no |
-| <a name="input_kubeconfig_group"></a> [kubeconfig\_group](#input\_kubeconfig\_group) | Group for the kubeconfig credential | `string` | `null` | no |
-| <a name="input_kubeconfig_ttl"></a> [kubeconfig\_ttl](#input\_kubeconfig\_ttl) | Time-to-live for the kubeconfig token (e.g., '24h') | `string` | `null` | no |
-| <a name="input_kubeconfig_user"></a> [kubeconfig\_user](#input\_kubeconfig\_user) | User name for the kubeconfig credential | `string` | `null` | no |
-| <a name="input_kubeconfig_x_encrypt_nacl"></a> [kubeconfig\_x\_encrypt\_nacl](#input\_kubeconfig\_x\_encrypt\_nacl) | NaCl public key for encrypting the kubeconfig. When set, the kubeconfig is returned encrypted | `string` | `null` | no |
-| <a name="input_kubernetes_version"></a> [kubernetes\_version](#input\_kubernetes\_version) | Kubernetes version to deploy for the OKS cluster (e.g., '1.31'). Use outscale\_oks\_quotas data source to list available versions | `string` | n/a | yes |
-| <a name="input_project_cidr"></a> [project\_cidr](#input\_project\_cidr) | CIDR block to associate with the Net of the OKS project (e.g., '10.0.0.0/16') | `string` | n/a | yes |
-| <a name="input_project_description"></a> [project\_description](#input\_project\_description) | Description of the OKS project | `string` | `null` | no |
-| <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Name of the OKS project (2-40 chars, lowercase alphanumeric and hyphens, must start with letter and end with letter or number) | `string` | n/a | yes |
-| <a name="input_project_tags"></a> [project\_tags](#input\_project\_tags) | Additional tags to apply only to the OKS project. Merged with common tags | `map(string)` | `{}` | no |
-| <a name="input_region"></a> [region](#input\_region) | Outscale region for the OKS project deployment (e.g., 'eu-west-2', 'cloudgouv-eu-west-1') | `string` | n/a | yes |
+| <a name="input_projects"></a> [projects](#input\_projects) | Map of OKS projects to create. Keys are logical identifiers used to reference projects from clusters | <pre>map(object({<br/>    name                              = string<br/>    cidr                              = string<br/>    region                            = string<br/>    description                       = optional(string)<br/>    enable_api_termination_protection = optional(bool, false)<br/>    tags                              = optional(map(string), {})<br/>  }))</pre> | n/a | yes |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to apply to all OKS resources. Merged with module-managed tags | `map(string)` | `{}` | no |
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
-| <a name="output_cluster_cni"></a> [cluster\_cni](#output\_cluster\_cni) | Container Network Interface (CNI) plugin used by the cluster |
-| <a name="output_cluster_dns"></a> [cluster\_dns](#output\_cluster\_dns) | DNS endpoint of the OKS cluster API server |
-| <a name="output_cluster_id"></a> [cluster\_id](#output\_cluster\_id) | ID of the OKS cluster |
-| <a name="output_cluster_name"></a> [cluster\_name](#output\_cluster\_name) | Name of the OKS cluster |
-| <a name="output_cluster_statuses"></a> [cluster\_statuses](#output\_cluster\_statuses) | Current statuses of the OKS cluster |
-| <a name="output_cluster_version"></a> [cluster\_version](#output\_cluster\_version) | Kubernetes version deployed on the cluster |
-| <a name="output_kubeconfig"></a> [kubeconfig](#output\_kubeconfig) | Kubeconfig file content for accessing the OKS cluster. Contains sensitive credentials |
-| <a name="output_project_created_at"></a> [project\_created\_at](#output\_project\_created\_at) | Creation timestamp of the OKS project |
-| <a name="output_project_id"></a> [project\_id](#output\_project\_id) | ID of the OKS project |
-| <a name="output_project_name"></a> [project\_name](#output\_project\_name) | Name of the OKS project |
-| <a name="output_project_status"></a> [project\_status](#output\_project\_status) | Current status of the OKS project |
-| <a name="output_project_updated_at"></a> [project\_updated\_at](#output\_project\_updated\_at) | Last update timestamp of the OKS project |
+| <a name="output_cluster_cni"></a> [cluster\_cni](#output\_cluster\_cni) | Map of cluster keys to their CNI plugins |
+| <a name="output_cluster_dns"></a> [cluster\_dns](#output\_cluster\_dns) | Map of cluster keys to their DNS endpoints |
+| <a name="output_cluster_ids"></a> [cluster\_ids](#output\_cluster\_ids) | Map of cluster keys to their IDs |
+| <a name="output_cluster_names"></a> [cluster\_names](#output\_cluster\_names) | Map of cluster keys to their names |
+| <a name="output_cluster_statuses"></a> [cluster\_statuses](#output\_cluster\_statuses) | Map of cluster keys to their current statuses |
+| <a name="output_cluster_versions"></a> [cluster\_versions](#output\_cluster\_versions) | Map of cluster keys to their Kubernetes versions |
+| <a name="output_kubeconfigs"></a> [kubeconfigs](#output\_kubeconfigs) | Map of cluster keys to their kubeconfig contents (only for clusters with enable\_kubeconfig = true) |
+| <a name="output_project_created_at"></a> [project\_created\_at](#output\_project\_created\_at) | Map of project keys to their creation timestamps |
+| <a name="output_project_ids"></a> [project\_ids](#output\_project\_ids) | Map of project keys to their IDs |
+| <a name="output_project_names"></a> [project\_names](#output\_project\_names) | Map of project keys to their names |
+| <a name="output_project_statuses"></a> [project\_statuses](#output\_project\_statuses) | Map of project keys to their current statuses |
+| <a name="output_project_updated_at"></a> [project\_updated\_at](#output\_project\_updated\_at) | Map of project keys to their last update timestamps |
 | <a name="output_quotas"></a> [quotas](#output\_quotas) | OKS account quotas (null when enable\_quotas is false) |
 <!-- END_TF_DOCS -->
 
