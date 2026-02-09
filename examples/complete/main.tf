@@ -70,7 +70,7 @@ module "oks" {
     }
   }
 
-  enable_quotas = true
+  enable_quotas = false
 
   tags = {
     Project     = "complete-example"
