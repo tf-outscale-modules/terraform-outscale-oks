@@ -9,7 +9,11 @@ terraform {
   }
 }
 
-provider "outscale" {}
+provider "outscale" {
+  # access_key_id   = ""
+  # secret_key_id   = ""
+  # region          = "eu-west-2"
+}
 
 module "networking" {
   source = "git::https://github.com/tf-outscale-modules/terraform-outscale-networking.git?ref=v1.0.0"
