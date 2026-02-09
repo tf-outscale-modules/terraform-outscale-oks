@@ -15,6 +15,16 @@ output "project_status" {
   value       = try(outscale_oks_project.this.status, null)
 }
 
+output "project_created_at" {
+  description = "Creation timestamp of the OKS project"
+  value       = try(outscale_oks_project.this.created_at, null)
+}
+
+output "project_updated_at" {
+  description = "Last update timestamp of the OKS project"
+  value       = try(outscale_oks_project.this.updated_at, null)
+}
+
 # ─── Cluster Outputs ─────────────────────────────────────────────────
 
 output "cluster_id" {
@@ -35,6 +45,16 @@ output "cluster_version" {
 output "cluster_statuses" {
   description = "Current statuses of the OKS cluster"
   value       = outscale_oks_cluster.this.statuses
+}
+
+output "cluster_dns" {
+  description = "DNS endpoint of the OKS cluster API server"
+  value       = try(outscale_oks_cluster.this.cluster_dns, null)
+}
+
+output "cluster_cni" {
+  description = "Container Network Interface (CNI) plugin used by the cluster"
+  value       = try(outscale_oks_cluster.this.cni, null)
 }
 
 # ─── Kubeconfig Outputs ─────────────────────────────────────────────

@@ -12,7 +12,7 @@ terraform {
 provider "outscale" {}
 
 module "networking" {
-  source = "git::https://github.com/tf-outscale-modules/terraform-outscale-networking.git?ref=v0.2.0"
+  source = "git::https://github.com/tf-outscale-modules/terraform-outscale-networking.git?ref=v1.0.0"
 
   name     = "oks-network"
   ip_range = "10.0.0.0/16"

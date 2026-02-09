@@ -3,9 +3,10 @@ data "outscale_oks_kubeconfig" "this" {
 
   cluster_id = outscale_oks_cluster.this.id
 
-  user  = var.kubeconfig_user
-  group = var.kubeconfig_group
-  ttl   = var.kubeconfig_ttl
+  user           = var.kubeconfig_user
+  group          = var.kubeconfig_group
+  ttl            = var.kubeconfig_ttl
+  x_encrypt_nacl = var.kubeconfig_x_encrypt_nacl
 }
 
 data "outscale_oks_quotas" "this" {

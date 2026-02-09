@@ -1,18 +1,18 @@
 locals {
   common_tags = merge(
-    { ManagedBy = "terraform" },
     var.tags,
+    { ManagedBy = "terraform" },
   )
 
   project_tags = merge(
+    var.project_tags,
     local.common_tags,
     { Name = var.project_name },
-    var.project_tags,
   )
 
   cluster_tags = merge(
+    var.cluster_tags,
     local.common_tags,
     { Name = var.cluster_name },
-    var.cluster_tags,
   )
 }
