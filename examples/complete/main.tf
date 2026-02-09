@@ -12,7 +12,7 @@ terraform {
 provider "outscale" {
   # access_key_id   = ""
   # secret_key_id   = ""
-  # region          = "eu-west-2"
+  region = "eu-west-2"
 }
 
 module "networking" {

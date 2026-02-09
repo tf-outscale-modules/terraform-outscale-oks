@@ -123,7 +123,7 @@ variable "node_pools" {
       iops   = optional(number)
       dir    = optional(string)
     })), [])
-    extra_spec = optional(map(any), {})
+    extra_spec = optional(any, {})
   }))
   default = {}
 
