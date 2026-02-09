@@ -11,9 +11,8 @@ yamlfmt = '0.20'
 opentofu = '1.11'
 terraform-docs = '0.21.0'
 tflint = '0.56.0'
-python = '3.13'
-pipx = 'latest'
-# Install oks-cli via pipx
+uv = 'latest'
+# Install oks-cli via uv (mise's pipx backend uses uvx when uv is available)
 "pipx:oks-cli" = "latest"
 
 [tasks.rm-cache]
