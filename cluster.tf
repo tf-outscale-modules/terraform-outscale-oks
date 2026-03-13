@@ -17,6 +17,10 @@ resource "outscale_oks_cluster" "this" {
 
   tags = local.cluster_tags[each.key]
 
+  timeouts {
+    create = "18m"
+  }
+
   lifecycle {
     precondition {
       condition     = contains(keys(var.projects), each.value.project_key)
