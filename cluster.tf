@@ -19,6 +19,8 @@ resource "outscale_oks_cluster" "this" {
 
   timeouts {
     create = "18m"
+    update = "15m"
+    delete = "15m"
   }
 
   lifecycle {

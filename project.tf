@@ -9,8 +9,4 @@ resource "outscale_oks_project" "this" {
   disable_api_termination = each.value.enable_api_termination_protection
 
   tags = local.project_tags[each.key]
-
-  timeouts {
-    create = "15m"
-  }
 }
