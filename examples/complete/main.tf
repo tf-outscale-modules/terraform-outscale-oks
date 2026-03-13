@@ -36,7 +36,7 @@ provider "outscale" {
 #   }
 
 #   tags = {
-#     Project     = "cloud-native-complete-example"
+#     Project     = "oks-complete-example"
 #     Environment = "staging"
 #   }
 # }
@@ -46,7 +46,7 @@ module "oks" {
 
   projects = {
     main = {
-      name                              = "cloud-native-complete-example"
+      name                              = "oks-complete-example"
       cidr                              = "10.0.0.0/16"
       region                            = "eu-west-2"
       description                       = "Production OKS with full features"
@@ -59,7 +59,7 @@ module "oks" {
 
   clusters = {
     main = {
-      name                              = "cloud-native-complete-cluster"
+      name                              = "oks-complete-cluster"
       project_key                       = "main"
       kubernetes_version                = "1.31"
       cidr_pods                         = "10.91.0.0/16"
@@ -80,7 +80,7 @@ module "oks" {
   enable_quotas = false
 
   tags = {
-    Project     = "cloud-native-complete-example"
+    Project     = "oks-complete-example"
     Environment = "staging"
   }
 }

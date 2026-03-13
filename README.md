@@ -1,4 +1,4 @@
-# Outscale Cloud Native Terraform Module
+# Outscale OKS Terraform Module
 
 [![Apache 2.0][apache-shield]][apache]
 [![Terraform][terraform-badge]][terraform-url]
@@ -35,7 +35,7 @@ Terraform module for provisioning and managing Outscale Kubernetes Service (OKS)
 
 ```hcl
 module "oks" {
-  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.2.0"
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-oks.git?ref=v0.2.0"
 
   projects = {
     main = {
@@ -62,7 +62,7 @@ module "oks" {
 
 ```hcl
 module "oks" {
-  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.3.0"
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-oks.git?ref=v0.3.0"
 
   projects = {
     prod = {
@@ -131,7 +131,7 @@ module "oks" {
 
 ```hcl
 module "oks" {
-  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.2.0"
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-oks.git?ref=v0.2.0"
 
   projects = {
     dev  = { name = "dev-project",  cidr = "10.0.0.0/16", region = "eu-west-2" }
@@ -276,5 +276,5 @@ This module is provided "as is" without warranty of any kind. Use at your own ri
 [provider-badge]: https://img.shields.io/badge/Outscale%20Provider-~%3E1.3-orange
 [provider-url]: https://registry.terraform.io/providers/outscale/outscale/latest
 
-[release-badge]: https://img.shields.io/gitlab/v/release/leminnov/terraform/modules/outscale-cloud-native?include_prereleases&sort=semver
-[release-url]: https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native/-/releases
+[release-badge]: https://img.shields.io/gitlab/v/release/leminnov/terraform/modules/outscale-oks?include_prereleases&sort=semver
+[release-url]: https://gitlab.com/leminnov/terraform/modules/outscale-oks/-/releases
