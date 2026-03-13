@@ -1,3 +1,5 @@
+mock_provider "outscale" {}
+
 # ─── Common Test Variables ────────────────────────────────────────────
 
 variables {

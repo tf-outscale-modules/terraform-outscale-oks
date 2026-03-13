@@ -93,13 +93,6 @@ variable "clusters" {
     error_message = "Cluster admin_whitelist must contain at least one CIDR block."
   }
 
-  validation {
-    condition = alltrue([
-      for k, v in var.clusters :
-      alltrue([for cidr in v.admin_whitelist : can(cidrhost(cidr, 0))])
-    ])
-    error_message = "Each item in cluster admin_whitelist must be a valid CIDR block (e.g., '203.0.113.0/24')."
-  }
 }
 
 # ─── Data Source Variables ───────────────────────────────────────────

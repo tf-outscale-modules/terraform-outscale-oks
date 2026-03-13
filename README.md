@@ -1,4 +1,4 @@
-# Outscale Cloud Native Terraform Module
+# Outscale OKS Terraform Module
 
 [![Apache 2.0][apache-shield]][apache]
 [![Terraform][terraform-badge]][terraform-url]
@@ -17,6 +17,10 @@ Terraform module for provisioning and managing Outscale Kubernetes Service (OKS)
 - Account quota monitoring
 - API termination protection for production workloads
 - Flexible tagging with common and per-resource tags
+- Node pool management via `terraform_data` + `oks-cli` provisioners
+- GPU/fGPU support via generic `extra_spec` pass-through
+- Node pool autoscaling and auto-healing configuration
+- Custom volume attachments per node pool
 
 ## Requirements
 
@@ -31,7 +35,7 @@ Terraform module for provisioning and managing Outscale Kubernetes Service (OKS)
 
 ```hcl
 module "oks" {
-  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.2.0"
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-oks.git?ref=v0.2.0"
 
   projects = {
     main = {
@@ -58,7 +62,7 @@ module "oks" {
 
 ```hcl
 module "oks" {
-  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.2.0"
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-oks.git?ref=v0.3.0"
 
   projects = {
     prod = {
@@ -88,6 +92,32 @@ module "oks" {
     }
   }
 
+  node_pools = {
+    workers = {
+      name               = "worker-pool"
+      cluster_key        = "prod"
+      node_type          = "tinav6.c2r4p3"
+      desired_nodes      = 2
+      zones              = ["eu-west-2a", "eu-west-2b"]
+      enable_autoscaling = true
+      min_nodes          = 2
+      max_nodes          = 10
+    }
+    gpu = {
+      name          = "gpu-pool"
+      cluster_key   = "prod"
+      node_type     = "tinav6.c2r4p3"
+      desired_nodes = 1
+      zones         = ["eu-west-2a"]
+      extra_spec = {
+        fgpu = {
+          model          = "nvidia-p6"
+          "k8s-operator" = true
+        }
+      }
+    }
+  }
+
   enable_quotas = true
 
   tags = {
@@ -101,7 +131,7 @@ module "oks" {
 
 ```hcl
 module "oks" {
-  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native.git?ref=v0.2.0"
+  source = "git::https://gitlab.com/leminnov/terraform/modules/outscale-oks.git?ref=v0.2.0"
 
   projects = {
     dev  = { name = "dev-project",  cidr = "10.0.0.0/16", region = "eu-west-2" }
@@ -144,7 +174,10 @@ module "oks" {
 
 1. The Outscale provider OKS resources are from v1.3.0-alpha.1 — the API may evolve
 2. The module does not validate that `cidr`, `cidr_pods`, and `cidr_service` do not overlap
-3. Node pool management is not yet supported (planned for Phase 2)
+3. Node pools use `terraform_data` with `local-exec` provisioners — `oks-cli` must be installed on the machine running Terraform
+4. Terraform cannot detect out-of-band changes to node pools (e.g., manual `kubectl` edits)
+5. Node pool `terraform_data` resources cannot be imported to adopt existing node pools
+6. OKS autoscaling is in beta — behavior may change
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -152,7 +185,7 @@ module "oks" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.10 |
-| <a name="requirement_outscale"></a> [outscale](#requirement\_outscale) | ~> 1.3 |
+| <a name="requirement_outscale"></a> [outscale](#requirement\_outscale) | ~> 1.4 |
 
 ## Providers
 
@@ -237,5 +270,5 @@ This module is provided "as is" without warranty of any kind. Use at your own ri
 [provider-badge]: https://img.shields.io/badge/Outscale%20Provider-~%3E1.3-orange
 [provider-url]: https://registry.terraform.io/providers/outscale/outscale/latest
 
-[release-badge]: https://img.shields.io/gitlab/v/release/leminnov/terraform/modules/outscale-cloud-native?include_prereleases&sort=semver
-[release-url]: https://gitlab.com/leminnov/terraform/modules/outscale-cloud-native/-/releases
+[release-badge]: https://img.shields.io/gitlab/v/release/leminnov/terraform/modules/outscale-oks?include_prereleases&sort=semver
+[release-url]: https://gitlab.com/leminnov/terraform/modules/outscale-oks/-/releases

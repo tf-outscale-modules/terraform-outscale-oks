@@ -15,4 +15,5 @@ locals {
   kubeconfig_clusters = {
     for k, v in var.clusters : k => v if v.enable_kubeconfig
   }
+
 }
