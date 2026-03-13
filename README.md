@@ -185,14 +185,13 @@ module "oks" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.10 |
-| <a name="requirement_outscale"></a> [outscale](#requirement\_outscale) | ~> 1.3 |
+| <a name="requirement_outscale"></a> [outscale](#requirement\_outscale) | ~> 1.4 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
 | <a name="provider_outscale"></a> [outscale](#provider\_outscale) | 1.3.2 |
-| <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 
 ## Modules
 
@@ -204,8 +203,6 @@ No modules.
 |------|------|
 | [outscale_oks_cluster.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/oks_cluster) | resource |
 | [outscale_oks_project.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/oks_project) | resource |
-| [terraform_data.nodepool](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
-| [terraform_data.nodepool_update](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [outscale_oks_kubeconfig.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/data-sources/oks_kubeconfig) | data source |
 | [outscale_oks_quotas.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/data-sources/oks_quotas) | data source |
 
@@ -215,7 +212,6 @@ No modules.
 |------|-------------|------|---------|:--------:|
 | <a name="input_clusters"></a> [clusters](#input\_clusters) | Map of OKS clusters to create. Keys are logical identifiers. Each cluster references a project via project\_key | <pre>map(object({<br/>    name                              = string<br/>    project_key                       = string<br/>    kubernetes_version                = string<br/>    cidr_pods                         = string<br/>    cidr_service                      = string<br/>    admin_whitelist                   = list(string)<br/>    control_planes                    = optional(string, "cp.3.masters.small")<br/>    description                       = optional(string)<br/>    enable_cp_multi_az                = optional(bool, false)<br/>    enable_admin_lbu                  = optional(bool, false)<br/>    enable_api_termination_protection = optional(bool, false)<br/>    enable_kubeconfig                 = optional(bool, true)<br/>    kubeconfig_user                   = optional(string)<br/>    kubeconfig_group                  = optional(string)<br/>    kubeconfig_ttl                    = optional(string)<br/>    kubeconfig_x_encrypt_nacl         = optional(string)<br/>    tags                              = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
 | <a name="input_enable_quotas"></a> [enable\_quotas](#input\_enable\_quotas) | Enable retrieval of OKS account quotas data source | `bool` | `false` | no |
-| <a name="input_node_pools"></a> [node\_pools](#input\_node\_pools) | Map of OKS node pools to create. Keys are logical identifiers. Each node pool references a cluster via cluster\_key | <pre>map(object({<br/>    name                = string<br/>    cluster_key         = string<br/>    node_type           = string<br/>    desired_nodes       = number<br/>    zones               = list(string)<br/>    min_nodes           = optional(number)<br/>    max_nodes           = optional(number)<br/>    enable_autoscaling  = optional(bool, false)<br/>    enable_auto_healing = optional(bool, false)<br/>    volumes = optional(list(object({<br/>      device = string<br/>      type   = string<br/>      size   = number<br/>      iops   = optional(number)<br/>      dir    = optional(string)<br/>    })), [])<br/>    extra_spec = optional(map(any), {})<br/>  }))</pre> | `{}` | no |
 | <a name="input_projects"></a> [projects](#input\_projects) | Map of OKS projects to create. Keys are logical identifiers used to reference projects from clusters | <pre>map(object({<br/>    name                              = string<br/>    cidr                              = string<br/>    region                            = string<br/>    description                       = optional(string)<br/>    enable_api_termination_protection = optional(bool, false)<br/>    tags                              = optional(map(string), {})<br/>  }))</pre> | n/a | yes |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to apply to all OKS resources. Merged with module-managed tags | `map(string)` | `{}` | no |
 
@@ -230,8 +226,6 @@ No modules.
 | <a name="output_cluster_statuses"></a> [cluster\_statuses](#output\_cluster\_statuses) | Map of cluster keys to their current statuses |
 | <a name="output_cluster_versions"></a> [cluster\_versions](#output\_cluster\_versions) | Map of cluster keys to their Kubernetes versions |
 | <a name="output_kubeconfigs"></a> [kubeconfigs](#output\_kubeconfigs) | Map of cluster keys to their kubeconfig contents (only for clusters with enable\_kubeconfig = true) |
-| <a name="output_nodepool_manifests"></a> [nodepool\_manifests](#output\_nodepool\_manifests) | Map of node pool keys to their generated YAML manifests |
-| <a name="output_nodepool_names"></a> [nodepool\_names](#output\_nodepool\_names) | Map of node pool keys to their names |
 | <a name="output_project_created_at"></a> [project\_created\_at](#output\_project\_created\_at) | Map of project keys to their creation timestamps |
 | <a name="output_project_ids"></a> [project\_ids](#output\_project\_ids) | Map of project keys to their IDs |
 | <a name="output_project_names"></a> [project\_names](#output\_project\_names) | Map of project keys to their names |
