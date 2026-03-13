@@ -1,0 +1,37 @@
+# Agent OS Standards Index
+
+root:
+  global:
+    description: Dev environment profile (pre-commit, mise, tflint, CI, gitignore, editorconfig, git-cliff)
+  repo-structure:
+    description: Dev environment profile (pre-commit, mise, tflint, CI, gitignore, editorconfig, git-cliff)
+
+global:
+  code-style:
+    description: HCL formatting, block ordering, expressions, comments, lifecycle blocks
+  documentation:
+    description: Module README structure, terraform-docs, variable descriptions, examples, changelog
+  security:
+    description: Secrets handling, state security, least privilege, network defaults, static analysis
+  versioning:
+    description: Semantic versioning, git tags, registry modules, breaking change checklist
+
+terraform:
+  module-structure:
+    description: Standard file layout for Terraform modules (main.tf, variables.tf, outputs.tf, etc.)
+  naming:
+    description: Resource naming (this/descriptive), locals, tags, cloud resource naming patterns
+  outputs:
+    description: What to output, naming, declarations, ordering by resource
+  providers:
+    description: Provider version constraints, reusable vs root module provider config
+  state:
+    description: Remote backends, state locking, key structure, state references, hygiene
+  tech-stack:
+    description: IaC tooling (Terraform/OpenTofu), providers, testing, docs, CI/CD
+  variables:
+    description: Variable naming, declarations, validation blocks, sensitive vars, ordering
+
+testing:
+  terraform-tests:
+    description: Native tftest.hcl framework, what to test, CI validation, examples as tests
