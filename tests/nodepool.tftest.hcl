@@ -375,7 +375,7 @@ run "nodepool_invalid_cluster_key" {
   }
 
   expect_failures = [
-    terraform_data.nodepool,
+    outscale_oks_manifest.nodepool,
   ]
 }
 

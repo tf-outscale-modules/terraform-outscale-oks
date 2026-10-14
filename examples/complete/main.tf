@@ -4,7 +4,7 @@ terraform {
   required_providers {
     outscale = {
       source  = "outscale/outscale"
-      version = "~> 1.3"
+      version = "~> 1.8"
     }
   }
 }
@@ -74,6 +74,20 @@ module "oks" {
       tags = {
         Team = "platform"
       }
+    }
+  }
+
+  node_pools = {
+    workers = {
+      name                = "worker-pool"
+      cluster_key         = "main"
+      node_type           = "tinav6.c2r4p3"
+      desired_nodes       = 2
+      zones               = ["eu-west-2a", "eu-west-2b"]
+      enable_autoscaling  = true
+      min_nodes           = 2
+      max_nodes           = 5
+      enable_auto_healing = true
     }
   }
 
