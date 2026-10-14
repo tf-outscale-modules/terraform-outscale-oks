@@ -65,6 +65,24 @@ output "kubeconfigs" {
   sensitive   = true
 }
 
+output "kubeconfig_attributes" {
+  description = "Map of cluster keys to their API access attributes (host, cluster_ca_certificate, client_certificate, client_key) to configure the kubernetes/helm providers (only for clusters with enable_kubeconfig = true)"
+  value       = { for k, v in data.outscale_oks_kubeconfig.this : k => v.kubeconfig_attributes }
+  sensitive   = true
+}
+
+# ─── Node Pool Outputs ──────────────────────────────────────────────
+
+output "nodepool_manifests" {
+  description = "Map of node pool keys to their generated YAML manifests"
+  value       = local.nodepool_manifests
+}
+
+output "nodepool_names" {
+  description = "Map of node pool keys to their names"
+  value       = { for k, v in var.node_pools : k => v.name }
+}
+
 # ─── Quotas Outputs ──────────────────────────────────────────────────
 
 output "quotas" {

@@ -13,9 +13,9 @@ Production-grade OKS deployment demonstrating all module features with the [terr
 Set the following environment variables before running:
 
 ```bash
-export OUTSCALE_ACCESSKEYID="your-access-key"
-export OUTSCALE_SECRETKEYID="your-secret-key"
-export OUTSCALE_REGION="eu-west-2"
+export OSC_ACCESS_KEY="your-access-key"
+export OSC_SECRET_KEY="your-secret-key"
+export OSC_REGION="eu-west-2"
 ```
 
 Or use an [Outscale CLI configuration file](https://docs.outscale.com/en/userguide/Installing-and-Configuring-OSC-CLI.html).

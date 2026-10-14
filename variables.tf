@@ -93,6 +93,89 @@ variable "clusters" {
     error_message = "Cluster admin_whitelist must contain at least one CIDR block."
   }
 
+  validation {
+    condition = alltrue([
+      for k, v in var.clusters :
+      alltrue([for entry in v.admin_whitelist : can(cidrhost(entry, 0)) || can(cidrhost("${entry}/32", 0))])
+    ])
+    error_message = "Each item in cluster admin_whitelist must be an IP address or a CIDR block (e.g., '203.0.113.10' or '203.0.113.0/24')."
+  }
+}
+
+# ─── Node Pools ──────────────────────────────────────────────────────
+
+variable "node_pools" {
+  description = "Map of OKS node pools to create. Keys are logical identifiers. Each node pool references a cluster via cluster_key"
+  type = map(object({
+    name                = string
+    cluster_key         = string
+    node_type           = string
+    desired_nodes       = number
+    zones               = list(string)
+    min_nodes           = optional(number)
+    max_nodes           = optional(number)
+    enable_autoscaling  = optional(bool, false)
+    enable_auto_healing = optional(bool, false)
+    volumes = optional(list(object({
+      device = string
+      type   = string
+      size   = number
+      iops   = optional(number)
+      dir    = optional(string)
+    })), [])
+    extra_spec = optional(any, {})
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for k, v in var.node_pools :
+      can(regex("^[a-z][a-z0-9-]*[a-z0-9]$", v.name)) && length(v.name) >= 2 && length(v.name) <= 40
+    ])
+    error_message = "Node pool names must be 2-40 characters, lowercase alphanumeric and hyphens, start with a letter and end with a letter or number."
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.node_pools : v.desired_nodes >= 1])
+    error_message = "Node pool desired_nodes must be at least 1."
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.node_pools : length(v.zones) > 0])
+    error_message = "Node pool zones must contain at least one availability zone."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.node_pools :
+      !v.enable_autoscaling || (v.min_nodes != null && v.max_nodes != null)
+    ])
+    error_message = "Node pool min_nodes and max_nodes are required when enable_autoscaling is true."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.node_pools :
+      !v.enable_autoscaling || (v.min_nodes != null && v.max_nodes != null && v.min_nodes <= v.desired_nodes && v.desired_nodes <= v.max_nodes)
+    ])
+    error_message = "Node pool autoscaling requires min_nodes <= desired_nodes <= max_nodes."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.node_pools :
+      alltrue([for vol in v.volumes : contains(["standard", "gp2", "io1"], vol.type)])
+    ])
+    error_message = "Node pool volume type must be one of: standard, gp2, io1."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.node_pools :
+      alltrue([for vol in v.volumes : vol.type != "io1" || vol.iops != null])
+    ])
+    error_message = "Node pool volume iops is required when volume type is io1."
+  }
 }
 
 # ─── Data Source Variables ───────────────────────────────────────────
