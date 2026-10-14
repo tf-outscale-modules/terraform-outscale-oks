@@ -24,15 +24,15 @@ output "quotas" {
   value       = module.oks.quotas
 }
 
-# output "nodepool_names" {
-#   description = "Names of the OKS node pools"
-#   value       = module.oks.nodepool_names
-# }
+output "nodepool_names" {
+  description = "Names of the OKS node pools"
+  value       = module.oks.nodepool_names
+}
 
-# output "nodepool_manifests" {
-#   description = "Generated YAML manifests for the OKS node pools"
-#   value       = module.oks.nodepool_manifests
-# }
+output "nodepool_manifests" {
+  description = "Generated YAML manifests for the OKS node pools"
+  value       = module.oks.nodepool_manifests
+}
 
 # output "net_id" {
 #   description = "ID of the networking module VPC"

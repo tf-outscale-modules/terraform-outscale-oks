@@ -13,11 +13,11 @@ Terraform module for provisioning and managing Outscale Kubernetes Service (OKS)
 - Cluster-to-project linking via `project_key` references
 - Control plane sizing and multi-AZ deployment
 - Admin API whitelist for secure access control
-- Per-cluster kubeconfig retrieval with configurable TTL
+- Per-cluster kubeconfig retrieval with configurable TTL, plus `kubeconfig_attributes` (host, CA, client cert/key) to configure the kubernetes/helm providers
 - Account quota monitoring
 - API termination protection for production workloads
 - Flexible tagging with common and per-resource tags
-- Node pool management via `terraform_data` + `oks-cli` provisioners
+- Native node pool management via `outscale_oks_manifest` (NodePool CRDs, no `oks-cli` needed)
 - GPU/fGPU support via generic `extra_spec` pass-through
 - Node pool autoscaling and auto-healing configuration
 - Custom volume attachments per node pool
@@ -27,7 +27,7 @@ Terraform module for provisioning and managing Outscale Kubernetes Service (OKS)
 | Name | Version |
 |------|---------|
 | Terraform / OpenTofu | >= 1.10 |
-| Outscale Provider | ~> 1.3 |
+| Outscale Provider | ~> 1.8 |
 
 ## Usage
 
@@ -172,12 +172,10 @@ module "oks" {
 
 ## Known Limitations
 
-1. The Outscale provider OKS resources are from v1.3.0-alpha.1 — the API may evolve
+1. The OKS API may still evolve
 2. The module does not validate that `cidr`, `cidr_pods`, and `cidr_service` do not overlap
-3. Node pools use `terraform_data` with `local-exec` provisioners — `oks-cli` must be installed on the machine running Terraform
-4. Terraform cannot detect out-of-band changes to node pools (e.g., manual `kubectl` edits)
-5. Node pool `terraform_data` resources cannot be imported to adopt existing node pools
-6. OKS autoscaling is in beta — behavior may change
+3. Node pools are applied with server-side apply; `terraform apply` returns once the NodePool object is accepted, not when its nodes are ready
+4. OKS autoscaling is in beta — behavior may change
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -185,13 +183,13 @@ module "oks" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.10 |
-| <a name="requirement_outscale"></a> [outscale](#requirement\_outscale) | ~> 1.4 |
+| <a name="requirement_outscale"></a> [outscale](#requirement\_outscale) | ~> 1.8 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_outscale"></a> [outscale](#provider\_outscale) | 1.3.2 |
+| <a name="provider_outscale"></a> [outscale](#provider\_outscale) | ~> 1.8 |
 
 ## Modules
 
@@ -202,6 +200,7 @@ No modules.
 | Name | Type |
 |------|------|
 | [outscale_oks_cluster.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/oks_cluster) | resource |
+| [outscale_oks_manifest.nodepool](https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/oks_manifest) | resource |
 | [outscale_oks_project.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/oks_project) | resource |
 | [outscale_oks_kubeconfig.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/data-sources/oks_kubeconfig) | data source |
 | [outscale_oks_quotas.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/data-sources/oks_quotas) | data source |
@@ -212,6 +211,7 @@ No modules.
 |------|-------------|------|---------|:--------:|
 | <a name="input_clusters"></a> [clusters](#input\_clusters) | Map of OKS clusters to create. Keys are logical identifiers. Each cluster references a project via project\_key | <pre>map(object({<br/>    name                              = string<br/>    project_key                       = string<br/>    kubernetes_version                = string<br/>    cidr_pods                         = string<br/>    cidr_service                      = string<br/>    admin_whitelist                   = list(string)<br/>    control_planes                    = optional(string, "cp.3.masters.small")<br/>    description                       = optional(string)<br/>    enable_cp_multi_az                = optional(bool, false)<br/>    enable_admin_lbu                  = optional(bool, false)<br/>    enable_api_termination_protection = optional(bool, false)<br/>    enable_kubeconfig                 = optional(bool, true)<br/>    kubeconfig_user                   = optional(string)<br/>    kubeconfig_group                  = optional(string)<br/>    kubeconfig_ttl                    = optional(string)<br/>    kubeconfig_x_encrypt_nacl         = optional(string)<br/>    tags                              = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
 | <a name="input_enable_quotas"></a> [enable\_quotas](#input\_enable\_quotas) | Enable retrieval of OKS account quotas data source | `bool` | `false` | no |
+| <a name="input_node_pools"></a> [node\_pools](#input\_node\_pools) | Map of OKS node pools to create. Keys are logical identifiers. Each node pool references a cluster via cluster\_key | <pre>map(object({<br/>    name                = string<br/>    cluster_key         = string<br/>    node_type           = string<br/>    desired_nodes       = number<br/>    zones               = list(string)<br/>    min_nodes           = optional(number)<br/>    max_nodes           = optional(number)<br/>    enable_autoscaling  = optional(bool, false)<br/>    enable_auto_healing = optional(bool, false)<br/>    volumes = optional(list(object({<br/>      device = string<br/>      type   = string<br/>      size   = number<br/>      iops   = optional(number)<br/>      dir    = optional(string)<br/>    })), [])<br/>    extra_spec = optional(any, {})<br/>  }))</pre> | `{}` | no |
 | <a name="input_projects"></a> [projects](#input\_projects) | Map of OKS projects to create. Keys are logical identifiers used to reference projects from clusters | <pre>map(object({<br/>    name                              = string<br/>    cidr                              = string<br/>    region                            = string<br/>    description                       = optional(string)<br/>    enable_api_termination_protection = optional(bool, false)<br/>    tags                              = optional(map(string), {})<br/>  }))</pre> | n/a | yes |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to apply to all OKS resources. Merged with module-managed tags | `map(string)` | `{}` | no |
 
@@ -225,7 +225,10 @@ No modules.
 | <a name="output_cluster_names"></a> [cluster\_names](#output\_cluster\_names) | Map of cluster keys to their names |
 | <a name="output_cluster_statuses"></a> [cluster\_statuses](#output\_cluster\_statuses) | Map of cluster keys to their current statuses |
 | <a name="output_cluster_versions"></a> [cluster\_versions](#output\_cluster\_versions) | Map of cluster keys to their Kubernetes versions |
+| <a name="output_kubeconfig_attributes"></a> [kubeconfig\_attributes](#output\_kubeconfig\_attributes) | Map of cluster keys to their API access attributes (host, cluster\_ca\_certificate, client\_certificate, client\_key) to configure the kubernetes/helm providers (only for clusters with enable\_kubeconfig = true) |
 | <a name="output_kubeconfigs"></a> [kubeconfigs](#output\_kubeconfigs) | Map of cluster keys to their kubeconfig contents (only for clusters with enable\_kubeconfig = true) |
+| <a name="output_nodepool_manifests"></a> [nodepool\_manifests](#output\_nodepool\_manifests) | Map of node pool keys to their generated YAML manifests |
+| <a name="output_nodepool_names"></a> [nodepool\_names](#output\_nodepool\_names) | Map of node pool keys to their names |
 | <a name="output_project_created_at"></a> [project\_created\_at](#output\_project\_created\_at) | Map of project keys to their creation timestamps |
 | <a name="output_project_ids"></a> [project\_ids](#output\_project\_ids) | Map of project keys to their IDs |
 | <a name="output_project_names"></a> [project\_names](#output\_project\_names) | Map of project keys to their names |
@@ -267,7 +270,7 @@ This module is provided "as is" without warranty of any kind. Use at your own ri
 [terraform-badge]: https://img.shields.io/badge/Terraform-%3E%3D1.10-623CE4
 [terraform-url]: https://www.terraform.io
 
-[provider-badge]: https://img.shields.io/badge/Outscale%20Provider-~%3E1.3-orange
+[provider-badge]: https://img.shields.io/badge/Outscale%20Provider-~%3E1.8-orange
 [provider-url]: https://registry.terraform.io/providers/outscale/outscale/latest
 
 [release-badge]: https://img.shields.io/gitlab/v/release/leminnov/terraform/modules/outscale-oks?include_prereleases&sort=semver
