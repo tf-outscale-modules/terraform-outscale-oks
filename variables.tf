@@ -74,8 +74,13 @@ variable "clusters" {
   }
 
   validation {
-    condition     = alltrue([for k, v in var.clusters : can(regex("^[0-9]+\\.[0-9]+", v.kubernetes_version))])
+    condition     = alltrue([for k, v in var.clusters : can(regex("^[0-9]+\\.[0-9]+(\\.[0-9]+)?$", v.kubernetes_version))])
     error_message = "Cluster kubernetes_version must be a valid version string (e.g., '1.31')."
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.clusters : contains(keys(var.projects), v.project_key)])
+    error_message = "Each cluster project_key must match a key of var.projects."
   }
 
   validation {
@@ -104,6 +109,8 @@ variable "clusters" {
 
 # ─── Node Pools ──────────────────────────────────────────────────────
 
+# DEVIATION(terraform-variables): `extra_spec` is `any`, the documented pass-through of provider-specific
+# NodePool fields; typing it would break callers. Never put secrets in it (SECURITY.md).
 variable "node_pools" {
   description = "Map of OKS node pools to create. Keys are logical identifiers. Each node pool references a cluster via cluster_key"
   type = map(object({
@@ -126,6 +133,11 @@ variable "node_pools" {
     extra_spec = optional(any, {})
   }))
   default = {}
+
+  validation {
+    condition     = alltrue([for k, v in var.node_pools : contains(keys(var.clusters), v.cluster_key)])
+    error_message = "Each node pool cluster_key must match a key of var.clusters."
+  }
 
   validation {
     condition = alltrue([
@@ -156,7 +168,7 @@ variable "node_pools" {
   validation {
     condition = alltrue([
       for k, v in var.node_pools :
-      !v.enable_autoscaling || (v.min_nodes != null && v.max_nodes != null && v.min_nodes <= v.desired_nodes && v.desired_nodes <= v.max_nodes)
+      !v.enable_autoscaling || v.min_nodes == null || v.max_nodes == null || (v.min_nodes <= v.desired_nodes && v.desired_nodes <= v.max_nodes)
     ])
     error_message = "Node pool autoscaling requires min_nodes <= desired_nodes <= max_nodes."
   }

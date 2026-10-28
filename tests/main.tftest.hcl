@@ -737,6 +737,58 @@ run "name_tag_cannot_be_overridden" {
   }
 }
 
+run "resource_tags_override_common_tags" {
+  command = plan
+
+  variables {
+    tags = {
+      Team = "platform"
+    }
+    projects = {
+      proj = {
+        name   = "test-project"
+        cidr   = "10.0.0.0/16"
+        region = "eu-west-2"
+        tags = {
+          Team = "data"
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_oks_project.this["proj"].tags["Team"] == "data"
+    error_message = "Project tags must win over var.tags"
+  }
+
+  assert {
+    condition     = outscale_oks_cluster.this["cluster"].tags["Team"] == "platform"
+    error_message = "var.tags must apply to a cluster that does not set the key"
+  }
+}
+
+run "managed_by_cannot_be_overridden_by_resource_tags" {
+  command = plan
+
+  variables {
+    projects = {
+      proj = {
+        name   = "test-project"
+        cidr   = "10.0.0.0/16"
+        region = "eu-west-2"
+        tags = {
+          ManagedBy = "manual"
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_oks_project.this["proj"].tags["ManagedBy"] == "terraform"
+    error_message = "ManagedBy tag must not be overridable by resource-specific tags"
+  }
+}
+
 # ─── Validation Tests: Project Name ──────────────────────────────────
 
 run "invalid_project_name_uppercase" {
@@ -1005,6 +1057,70 @@ run "invalid_kubernetes_version_format" {
   ]
 }
 
+run "invalid_kubernetes_version_trailing_characters" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31abc"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+      }
+    }
+  }
+
+  expect_failures = [
+    var.clusters,
+  ]
+}
+
+run "kubernetes_version_with_patch_accepted" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31.2"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_oks_cluster.this["cluster"].version == "1.31.2"
+    error_message = "A major.minor.patch version must be accepted"
+  }
+}
+
+run "invalid_cluster_project_key" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "missing"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+      }
+    }
+  }
+
+  expect_failures = [
+    var.clusters,
+  ]
+}
+
 # ─── Validation Tests: Region ─────────────────────────────────────────
 
 run "invalid_region_format" {
@@ -1039,9 +1155,7 @@ run "empty_projects_rejected" {
   ]
 }
 
-# ─── API-Dependent Tests (require Outscale credentials) ──────────────
-# These tests are placed last because they make real API calls and will
-# fail without valid credentials, causing all subsequent tests to skip.
+# ─── Data Source Tests (mocked provider, no credentials needed) ──────
 
 run "quotas_enabled" {
   command = plan

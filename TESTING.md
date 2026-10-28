@@ -30,11 +30,11 @@ Validates that module outputs contain expected values and that conditional outpu
 
 ### Validation Tests
 
-Validates that input validation rules correctly reject invalid values for project names, cluster names, CIDR blocks, and empty admin whitelists.
+Validates that input validation rules correctly reject invalid values for project names, cluster names, Kubernetes versions, project and cluster references, CIDR blocks, and empty admin whitelists, plus the `nodepool_extra_spec_no_secret` check.
 
 ### Tag Tests
 
-Validates that common tags, project-specific tags, and cluster-specific tags are merged correctly.
+Validates that common tags, project-specific tags, and cluster-specific tags are merged correctly (project and cluster tags win over `tags`; `ManagedBy` and `Name` always win).
 
 ## Test Strategy
 

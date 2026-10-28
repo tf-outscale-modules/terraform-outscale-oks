@@ -53,6 +53,8 @@ module "oks" {
       enable_api_termination_protection = false
       tags = {
         CostCenter = "infrastructure"
+        # Per-resource tags win over the module-level `tags` below
+        Environment = "production"
       }
     }
   }

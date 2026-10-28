@@ -1,15 +1,10 @@
 locals {
-  common_tags = merge(
-    var.tags,
-    { ManagedBy = "terraform" },
-  )
-
   project_tags = {
-    for k, v in var.projects : k => merge(v.tags, local.common_tags, { Name = v.name })
+    for k, v in var.projects : k => merge(var.tags, v.tags, { ManagedBy = "terraform", Name = v.name })
   }
 
   cluster_tags = {
-    for k, v in var.clusters : k => merge(v.tags, local.common_tags, { Name = v.name })
+    for k, v in var.clusters : k => merge(var.tags, v.tags, { ManagedBy = "terraform", Name = v.name })
   }
 
   kubeconfig_clusters = {

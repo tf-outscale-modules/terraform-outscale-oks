@@ -21,11 +21,11 @@ The module SHALL create one OKS manifest per entry of `node_pools` (default `{}`
 - **THEN** two manifest resources are planned, one per key
 
 ### Requirement: Node pool cluster reference
-Each node pool SHALL reference a cluster declared in `clusters` through `cluster_key`.
+Each node pool SHALL reference a cluster declared in `clusters` through `cluster_key`. An unknown `cluster_key` SHALL be rejected by the validation of `node_pools`.
 
 #### Scenario: Unknown cluster key
 - **WHEN** a node pool has `cluster_key = "nonexistent"` and `clusters` has no such key
-- **THEN** the plan fails on the node pool manifest resource
+- **THEN** the plan fails with "Each node pool cluster_key must match a key of var.clusters."
 
 ### Requirement: NodePool manifest content
 The manifest of a node pool SHALL be a YAML document with `apiVersion: oks.dev/v1beta2`, `kind: NodePool`, `metadata.name` equal to the node pool `name`, and a `spec` containing `nodeType`, `desiredNodes` and `zones`. The module SHALL expose the manifests as `nodepool_manifests` and the node pool names as `nodepool_names`, both keyed by node pool key.
@@ -80,11 +80,11 @@ A node pool `name` SHALL be 2 to 40 characters, lowercase alphanumeric character
 - **THEN** the plan fails with "Node pool zones must contain at least one availability zone."
 
 ### Requirement: Autoscaling bounds validation
-When `enable_autoscaling` is `true`, `min_nodes` and `max_nodes` SHALL be set and `min_nodes <= desired_nodes <= max_nodes`.
+When `enable_autoscaling` is `true`, `min_nodes` and `max_nodes` SHALL be set and `min_nodes <= desired_nodes <= max_nodes`. A missing bound SHALL produce only the "required" error.
 
 #### Scenario: Missing bounds
 - **WHEN** a node pool sets `enable_autoscaling = true` without `min_nodes` and `max_nodes`
-- **THEN** the plan fails with "Node pool min_nodes and max_nodes are required when enable_autoscaling is true."
+- **THEN** the plan fails with "Node pool min_nodes and max_nodes are required when enable_autoscaling is true." and no ordering error
 
 #### Scenario: Minimum above desired
 - **WHEN** a node pool sets `enable_autoscaling = true`, `min_nodes = 5`, `desired_nodes = 2` and `max_nodes = 10`
@@ -104,3 +104,14 @@ A volume `type` SHALL be one of `standard`, `gp2` or `io1`, and `iops` SHALL be 
 #### Scenario: io1 without iops
 - **WHEN** a node pool has a volume with `type = "io1"` and no `iops`
 - **THEN** the plan fails with "Node pool volume iops is required when volume type is io1."
+
+### Requirement: No secret in extra_spec
+`extra_spec` is merged into the manifest, which lands in the plan, the state and the non-sensitive `nodepool_manifests` output. A `check` block SHALL warn when the `extra_spec` of a node pool contains a key or value that looks like a secret (password, secret, token, credential, private key, api key). `SECURITY.md` SHALL document that `extra_spec` must never carry secrets.
+
+#### Scenario: Secret-looking extra_spec
+- **WHEN** a node pool sets `extra_spec = { registryToken = "abc" }`
+- **THEN** the plan emits a warning from `check.nodepool_extra_spec_no_secret` naming the node pool
+
+#### Scenario: Regular extra_spec
+- **WHEN** a node pool sets `extra_spec = { fgpu = { model = "nvidia-p6" } }`
+- **THEN** no warning is emitted
