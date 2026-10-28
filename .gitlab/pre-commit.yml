@@ -5,10 +5,16 @@ pre-commit:
     - exists:
         - .pre-commit-config.yaml
   cache:
-    - key: pre-commit-${CI_COMMIT_REF_SLUG}
+    - key:
+        files:
+          - .pre-commit-config.yaml
+        prefix: pre-commit
       paths:
         - .cache/pre-commit
-    - key: mise-${CI_COMMIT_REF_SLUG}
+    - key:
+        files:
+          - mise.toml
+        prefix: mise
       paths:
         - .cache/mise
   variables:
