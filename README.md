@@ -248,13 +248,15 @@ No modules.
 
 ## Contributing
 
-Contributions are welcome. Please ensure your changes:
+Contributions are welcome. Changes are planned with [OpenSpec](https://github.com/Fission-AI/OpenSpec): `openspec/specs/` is the module's current contract and [AGENTS.md](AGENTS.md) routes to the engineering standards. Behaviour changes, new inputs, outputs or resources go through a change proposal (`/openspec-propose`) before any code. Run `mise run spec-setup` once per machine to register the standards stores. Please ensure your changes:
 
 1. Pass `tofu fmt -check -recursive`
 2. Pass `tofu validate`
 3. Pass `tflint --recursive`
-4. Include tests for new features
-5. Update documentation as needed
+4. Pass `tofu test`
+5. Pass `mise run spec-validate`
+6. Include tests for new features
+7. Update documentation as needed
 
 ## License
 
