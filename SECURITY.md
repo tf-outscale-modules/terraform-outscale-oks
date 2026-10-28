@@ -34,6 +34,15 @@ Terraform state files contain the kubeconfig in plaintext when `enable_kubeconfi
 - Never commit `.tfstate` or `.tfstate.backup` files to version control
 - Consider setting `enable_kubeconfig = false` and retrieving credentials separately if state security is a concern
 
+## What lands in state
+
+| Data | Where | Mitigation |
+|------|-------|------------|
+| Kubeconfig (tokens, certificates) | `data.outscale_oks_kubeconfig` in state, sensitive `kubeconfigs` and `kubeconfig_attributes` outputs | Encrypted remote backend; `enable_kubeconfig = false` |
+| `node_pools[*].extra_spec` | NodePool manifest in plan and state, **non-sensitive** `nodepool_manifests` output | Never put a password, token or key in `extra_spec`; a `check` warns on secret-looking keys or values (heuristic, not a guarantee) |
+
+`nodepool_manifests` is intentionally not sensitive (a NodePool spec carries no secret, and marking it sensitive would break consumers that re-export it). Treat everything passed in `extra_spec` as public to anyone who can read the plan, the state or the module outputs.
+
 ## Reporting Vulnerabilities
 
 If you discover a security vulnerability, please report it responsibly by contacting the maintainers directly rather than opening a public issue.

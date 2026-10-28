@@ -16,9 +16,9 @@ Terraform module for provisioning and managing Outscale Kubernetes Service (OKS)
 - Per-cluster kubeconfig retrieval with configurable TTL, plus `kubeconfig_attributes` (host, CA, client cert/key) to configure the kubernetes/helm providers
 - Account quota monitoring
 - API termination protection for production workloads
-- Flexible tagging with common and per-resource tags
+- Flexible tagging with common and per-resource tags (per-resource tags win over `tags`; `ManagedBy` and `Name` are module-owned)
 - Native node pool management via `outscale_oks_manifest` (NodePool CRDs, no `oks-cli` needed)
-- GPU/fGPU support via generic `extra_spec` pass-through
+- GPU/fGPU support via generic `extra_spec` pass-through (never put secrets in it, see [SECURITY.md](SECURITY.md))
 - Node pool autoscaling and auto-healing configuration
 - Custom volume attachments per node pool
 

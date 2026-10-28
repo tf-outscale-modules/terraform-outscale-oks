@@ -5,11 +5,4 @@ resource "outscale_oks_manifest" "nodepool" {
 
   cluster_id = outscale_oks_cluster.this[each.value.cluster_key].id
   manifest   = local.nodepool_manifests[each.key]
-
-  lifecycle {
-    precondition {
-      condition     = contains(keys(var.clusters), each.value.cluster_key)
-      error_message = "Node pool '${each.key}' references cluster_key '${each.value.cluster_key}' which does not exist in var.clusters."
-    }
-  }
 }

@@ -22,11 +22,4 @@ resource "outscale_oks_cluster" "this" {
     update = "15m"
     delete = "15m"
   }
-
-  lifecycle {
-    precondition {
-      condition     = contains(keys(var.projects), each.value.project_key)
-      error_message = "Cluster '${each.key}' references project_key '${each.value.project_key}' which does not exist in var.projects."
-    }
-  }
 }

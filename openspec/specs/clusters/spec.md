@@ -24,7 +24,7 @@ Optional cluster attributes SHALL default as follows: `control_planes` `"cp.3.ma
 - **THEN** the cluster is planned with that control plane size, `cp_multi_az = true` and `admin_lbu = true`
 
 ### Requirement: Cluster project reference
-Each cluster SHALL reference a project declared in `projects` through `project_key`, and the cluster SHALL be created with the ID of that project.
+Each cluster SHALL reference a project declared in `projects` through `project_key`, and the cluster SHALL be created with the ID of that project. An unknown `project_key` SHALL be rejected by the validation of `clusters`.
 
 #### Scenario: Cluster in a project
 - **WHEN** `clusters = { main = { project_key = "main", ... } }` and `projects` has the key `main`
@@ -32,7 +32,7 @@ Each cluster SHALL reference a project declared in `projects` through `project_k
 
 #### Scenario: Unknown project key
 - **WHEN** a cluster has `project_key = "missing"` and `projects` has no such key
-- **THEN** the plan fails on the cluster resource
+- **THEN** the plan fails with "Each cluster project_key must match a key of var.projects."
 
 ### Requirement: Cluster name validation
 A cluster `name` SHALL be 2 to 40 characters, lowercase alphanumeric characters and hyphens, start with a letter and end with a letter or a digit.
@@ -50,11 +50,15 @@ A cluster `name` SHALL be 2 to 40 characters, lowercase alphanumeric characters 
 - **THEN** the plan fails with the same error
 
 ### Requirement: Cluster Kubernetes version validation
-A cluster `kubernetes_version` SHALL start with a major and a minor number separated by a dot.
+A cluster `kubernetes_version` SHALL be a major and a minor number separated by a dot, optionally followed by a dot and a patch number, and nothing else.
 
 #### Scenario: Invalid version
 - **WHEN** a cluster has `kubernetes_version = "latest"`
 - **THEN** the plan fails with "Cluster kubernetes_version must be a valid version string (e.g., '1.31')."
+
+#### Scenario: Trailing characters
+- **WHEN** a cluster has `kubernetes_version = "1.31abc"`
+- **THEN** the plan fails with the same error
 
 ### Requirement: Cluster CIDR validation
 `cidr_pods` and `cidr_service` SHALL be valid CIDR notation. The module SHALL NOT check that they do not overlap each other or the project CIDR.

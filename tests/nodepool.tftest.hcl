@@ -375,7 +375,7 @@ run "nodepool_invalid_cluster_key" {
   }
 
   expect_failures = [
-    outscale_oks_manifest.nodepool,
+    var.node_pools,
   ]
 }
 
@@ -606,4 +606,55 @@ run "invalid_nodepool_io1_without_iops" {
   expect_failures = [
     var.node_pools,
   ]
+}
+
+# ─── Check: no secret in extra_spec ─────────────────────────────────
+
+run "nodepool_extra_spec_secret_warns" {
+  command = plan
+
+  variables {
+    node_pools = {
+      workers = {
+        name          = "worker-pool"
+        cluster_key   = "cluster"
+        node_type     = "tinav6.c2r4p3"
+        desired_nodes = 2
+        zones         = ["eu-west-2a"]
+        extra_spec = {
+          registryToken = "abc"
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    check.nodepool_extra_spec_no_secret,
+  ]
+}
+
+run "nodepool_extra_spec_regular_no_warning" {
+  command = plan
+
+  variables {
+    node_pools = {
+      gpu = {
+        name          = "gpu-pool"
+        cluster_key   = "cluster"
+        node_type     = "tinav6.c2r4p3"
+        desired_nodes = 1
+        zones         = ["eu-west-2a"]
+        extra_spec = {
+          fgpu = {
+            model = "nvidia-p6"
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = can(regex("nvidia-p6", output.nodepool_manifests["gpu"]))
+    error_message = "A regular extra_spec must plan without check warning"
+  }
 }
