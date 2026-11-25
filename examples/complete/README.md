@@ -30,6 +30,8 @@ Or use an [Outscale CLI configuration file](https://docs.outscale.com/en/usergui
   - Admin load balancer
   - API termination protection
   - 24h kubeconfig TTL
+  - Patch upgrade maintenance window, control plane Subregions, cluster DNS and admission plugins (changing `cp_subregions` or `cluster_dns` later forces replacement)
+- Node pool with a readiness wait (`wait_for`), a field manager and wait on delete
 - Account quota retrieval
 - Custom tags per resource (global, project-specific, and cluster-specific)
 

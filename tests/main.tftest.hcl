@@ -1169,3 +1169,326 @@ run "quotas_enabled" {
     error_message = "Quotas data source should be enabled when requested"
   }
 }
+
+# ─── Maintenance, Control Plane and Admission Options ────────────────
+
+run "cluster_new_options_default_null" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+      }
+    }
+  }
+
+  assert {
+    condition     = !can(var.clusters["cluster"].cluster_dns)
+    error_message = "cluster_dns must not be set when the caller omits it"
+  }
+
+  assert {
+    condition     = !can(var.clusters["cluster"].auto_maintenances) && !can(var.clusters["cluster"].cp_subregions) && !can(var.clusters["cluster"].admission_flags)
+    error_message = "auto_maintenances, cp_subregions and admission_flags must default to null"
+  }
+}
+
+run "cluster_patch_window_planned" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        auto_maintenances = {
+          patch_upgrade_maintenance = { week_day = "Sun", start_hour = 3, duration_hours = 2, tz = "Europe/Paris" }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_oks_cluster.this["cluster"].auto_maintenances.patch_upgrade_maintenance.week_day == "Sun"
+    error_message = "patch window week_day must be planned"
+  }
+
+  assert {
+    condition     = outscale_oks_cluster.this["cluster"].auto_maintenances.patch_upgrade_maintenance.start_hour == 3
+    error_message = "patch window start_hour must be planned"
+  }
+
+  assert {
+    condition     = outscale_oks_cluster.this["cluster"].auto_maintenances.minor_upgrade_maintenance == null
+    error_message = "minor window must stay unset"
+  }
+}
+
+run "cluster_admission_flags_planned" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        admission_flags    = { enable_admission_plugins = ["NodeRestriction"] }
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_oks_cluster.this["cluster"].admission_flags.enable_admission_plugins == toset(["NodeRestriction"])
+    error_message = "enabled plugin must be planned"
+  }
+
+  assert {
+    condition     = outscale_oks_cluster.this["cluster"].admission_flags.disable_admission_plugins == null
+    error_message = "disabled plugins must stay unset"
+  }
+}
+
+run "cluster_cp_subregions_and_dns_planned" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        enable_cp_multi_az = true
+        cp_subregions      = ["eu-west-2a", "eu-west-2b"]
+        cluster_dns        = "10.92.0.10"
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_oks_cluster.this["cluster"].cp_subregions == toset(["eu-west-2a", "eu-west-2b"])
+    error_message = "cp_subregions must be planned"
+  }
+
+  assert {
+    condition     = outscale_oks_cluster.this["cluster"].cluster_dns == "10.92.0.10"
+    error_message = "cluster_dns must be planned"
+  }
+}
+
+run "cluster_auto_maintenance_week_day_rejected" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        auto_maintenances  = { patch_upgrade_maintenance = { week_day = "Sunday" } }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.clusters,
+  ]
+}
+
+run "cluster_auto_maintenance_start_hour_rejected" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        auto_maintenances  = { minor_upgrade_maintenance = { start_hour = 24 } }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.clusters,
+  ]
+}
+
+run "cluster_auto_maintenance_duration_rejected" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        auto_maintenances  = { minor_upgrade_maintenance = { duration_hours = -1 } }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.clusters,
+  ]
+}
+
+run "cluster_auto_maintenance_tz_rejected" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        auto_maintenances  = { patch_upgrade_maintenance = { tz = "" } }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.clusters,
+  ]
+}
+
+run "cluster_cp_subregions_empty_rejected" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        cp_subregions      = []
+      }
+    }
+  }
+
+  expect_failures = [
+    var.clusters,
+  ]
+}
+
+run "cluster_cp_subregions_malformed_rejected" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        cp_subregions      = ["EU_WEST_2A"]
+      }
+    }
+  }
+
+  expect_failures = [
+    var.clusters,
+  ]
+}
+
+run "cluster_dns_invalid_rejected" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        cluster_dns        = "not-an-ip"
+      }
+    }
+  }
+
+  expect_failures = [
+    var.clusters,
+  ]
+}
+
+run "cluster_admission_plugin_empty_rejected" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        admission_flags    = { enable_admission_plugins = [""] }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.clusters,
+  ]
+}
+
+run "cluster_admission_plugin_overlap_rejected" {
+  command = plan
+
+  variables {
+    clusters = {
+      cluster = {
+        name               = "test-cluster"
+        project_key        = "proj"
+        kubernetes_version = "1.31"
+        cidr_pods          = "10.91.0.0/16"
+        cidr_service       = "10.92.0.0/16"
+        admin_whitelist    = ["10.0.0.0/8"]
+        admission_flags = {
+          enable_admission_plugins  = ["PodSecurity"]
+          disable_admission_plugins = ["PodSecurity"]
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.clusters,
+  ]
+}

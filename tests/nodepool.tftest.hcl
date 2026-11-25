@@ -658,3 +658,235 @@ run "nodepool_extra_spec_regular_no_warning" {
     error_message = "A regular extra_spec must plan without check warning"
   }
 }
+
+# ─── Wait, Field Manager and Skip Delete Options ─────────────────────
+
+run "nodepool_new_options_default_null" {
+  command = plan
+
+  variables {
+    node_pools = {
+      workers = {
+        name          = "worker-pool"
+        cluster_key   = "cluster"
+        node_type     = "tinav6.c2r4p3"
+        desired_nodes = 2
+        zones         = ["eu-west-2a"]
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_oks_manifest.nodepool["workers"].wait_for == null
+    error_message = "wait_for must default to null"
+  }
+
+  assert {
+    condition     = !can(var.node_pools["workers"].enable_wait_on_delete)
+    error_message = "wait must default to null"
+  }
+
+  assert {
+    condition     = !can(var.node_pools["workers"].field_manager)
+    error_message = "field_manager must default to null"
+  }
+
+  assert {
+    condition     = !can(var.node_pools["workers"].skip_delete)
+    error_message = "skip_delete must default to null"
+  }
+}
+
+run "nodepool_wait_for_planned" {
+  command = plan
+
+  variables {
+    node_pools = {
+      workers = {
+        name          = "worker-pool"
+        cluster_key   = "cluster"
+        node_type     = "tinav6.c2r4p3"
+        desired_nodes = 2
+        zones         = ["eu-west-2a"]
+        wait_for      = { fields = { "status.progress.ready" = "1" }, timeout = "20m" }
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_oks_manifest.nodepool["workers"].wait_for.fields["status.progress.ready"] == "1"
+    error_message = "wait_for field must be planned"
+  }
+
+  assert {
+    condition     = outscale_oks_manifest.nodepool["workers"].wait_for.timeout == "20m"
+    error_message = "wait_for timeout must be planned"
+  }
+}
+
+run "nodepool_field_manager_planned" {
+  command = plan
+
+  variables {
+    node_pools = {
+      workers = {
+        name          = "worker-pool"
+        cluster_key   = "cluster"
+        node_type     = "tinav6.c2r4p3"
+        desired_nodes = 2
+        zones         = ["eu-west-2a"]
+        field_manager = { name = "platform-team", force_conflicts = true }
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_oks_manifest.nodepool["workers"].field_manager.name == "platform-team"
+    error_message = "field_manager name must be planned"
+  }
+
+  assert {
+    condition     = outscale_oks_manifest.nodepool["workers"].field_manager.force_conflicts == true
+    error_message = "field_manager force_conflicts must be planned"
+  }
+}
+
+run "nodepool_wait_on_delete_planned" {
+  command = plan
+
+  variables {
+    node_pools = {
+      workers = {
+        name                  = "worker-pool"
+        cluster_key           = "cluster"
+        node_type             = "tinav6.c2r4p3"
+        desired_nodes         = 2
+        zones                 = ["eu-west-2a"]
+        enable_wait_on_delete = true
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_oks_manifest.nodepool["workers"].wait == true
+    error_message = "wait on delete must be planned"
+  }
+}
+
+run "nodepool_skip_delete_per_pool" {
+  command = plan
+
+  variables {
+    node_pools = {
+      workers = {
+        name          = "worker-pool"
+        cluster_key   = "cluster"
+        node_type     = "tinav6.c2r4p3"
+        desired_nodes = 2
+        zones         = ["eu-west-2a"]
+        skip_delete   = true
+      }
+      batch = {
+        name          = "batch-pool"
+        cluster_key   = "cluster"
+        node_type     = "tinav6.c2r4p3"
+        desired_nodes = 1
+        zones         = ["eu-west-2a"]
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_oks_manifest.nodepool["workers"].skip_delete == true
+    error_message = "skip_delete must be planned on the pool that sets it"
+  }
+
+  assert {
+    condition     = !can(var.node_pools["batch"].skip_delete)
+    error_message = "skip_delete must stay unset on the other pool"
+  }
+}
+
+run "nodepool_wait_for_no_fields_rejected" {
+  command = plan
+
+  variables {
+    node_pools = {
+      workers = {
+        name          = "worker-pool"
+        cluster_key   = "cluster"
+        node_type     = "tinav6.c2r4p3"
+        desired_nodes = 2
+        zones         = ["eu-west-2a"]
+        wait_for      = { fields = {} }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.node_pools,
+  ]
+}
+
+run "nodepool_wait_for_empty_key_rejected" {
+  command = plan
+
+  variables {
+    node_pools = {
+      workers = {
+        name          = "worker-pool"
+        cluster_key   = "cluster"
+        node_type     = "tinav6.c2r4p3"
+        desired_nodes = 2
+        zones         = ["eu-west-2a"]
+        wait_for      = { fields = { "" = "1" } }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.node_pools,
+  ]
+}
+
+run "nodepool_wait_for_timeout_rejected" {
+  command = plan
+
+  variables {
+    node_pools = {
+      workers = {
+        name          = "worker-pool"
+        cluster_key   = "cluster"
+        node_type     = "tinav6.c2r4p3"
+        desired_nodes = 2
+        zones         = ["eu-west-2a"]
+        wait_for      = { fields = { "status.progress.ready" = "1" }, timeout = "soon" }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.node_pools,
+  ]
+}
+
+run "nodepool_field_manager_empty_name_rejected" {
+  command = plan
+
+  variables {
+    node_pools = {
+      workers = {
+        name          = "worker-pool"
+        cluster_key   = "cluster"
+        node_type     = "tinav6.c2r4p3"
+        desired_nodes = 2
+        zones         = ["eu-west-2a"]
+        field_manager = { name = "" }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.node_pools,
+  ]
+}

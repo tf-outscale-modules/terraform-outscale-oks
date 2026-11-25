@@ -40,6 +40,7 @@ Terraform state files contain the kubeconfig in plaintext when `enable_kubeconfi
 |------|-------|------------|
 | Kubeconfig (tokens, certificates) | `data.outscale_oks_kubeconfig` in state, sensitive `kubeconfigs` and `kubeconfig_attributes` outputs | Encrypted remote backend; `enable_kubeconfig = false` |
 | `node_pools[*].extra_spec` | NodePool manifest in plan and state, **non-sensitive** `nodepool_manifests` output | Never put a password, token or key in `extra_spec`; a `check` warns on secret-looking keys or values (heuristic, not a guarantee) |
+| `node_pools[*].skip_delete = true` | Not state: the NodePool object and its nodes stay in the cluster when the pool is removed from Terraform | Apply the flag before removal; `terraform import` the pool to manage it again |
 
 `nodepool_manifests` is intentionally not sensitive (a NodePool spec carries no secret, and marking it sensitive would break consumers that re-export it). Treat everything passed in `extra_spec` as public to anyone who can read the plan, the state or the module outputs.
 

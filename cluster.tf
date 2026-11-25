@@ -14,6 +14,10 @@ resource "outscale_oks_cluster" "this" {
   admin_lbu               = each.value.enable_admin_lbu
   description             = each.value.description
   disable_api_termination = each.value.enable_api_termination_protection
+  auto_maintenances       = each.value.auto_maintenances
+  cp_subregions           = each.value.cp_subregions
+  admission_flags         = each.value.admission_flags
+  cluster_dns             = each.value.cluster_dns
 
   tags = local.cluster_tags[each.key]
 
