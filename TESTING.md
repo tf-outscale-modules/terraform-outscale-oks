@@ -32,6 +32,10 @@ Validates that module outputs contain expected values and that conditional outpu
 
 Validates that input validation rules correctly reject invalid values for project names, cluster names, Kubernetes versions, project and cluster references, CIDR blocks, and empty admin whitelists, plus the `nodepool_extra_spec_no_secret` check.
 
+### Maintenance, Wait and Option Tests
+
+Validates that the opt-in cluster options (`auto_maintenances`, `cp_subregions`, `admission_flags`, `cluster_dns`) and node pool options (`wait_for`, `enable_wait_on_delete`, `field_manager`, `skip_delete`) are planned when set, stay unset by default, and are rejected when invalid.
+
 ### Tag Tests
 
 Validates that common tags, project-specific tags, and cluster-specific tags are merged correctly (project and cluster tags win over `tags`; `ManagedBy` and `Name` always win).
