@@ -21,13 +21,15 @@ Terraform module for provisioning and managing Outscale Kubernetes Service (OKS)
 - GPU/fGPU support via generic `extra_spec` pass-through (never put secrets in it, see [SECURITY.md](SECURITY.md))
 - Node pool autoscaling and auto-healing configuration
 - Custom volume attachments per node pool
+- Opt-in cluster auto-maintenance windows, control plane Subregions, admission plugins and cluster DNS
+- Opt-in node pool readiness wait (`wait_for`), server-side apply `field_manager` and `skip_delete`
 
 ## Requirements
 
 | Name | Version |
 |------|---------|
 | Terraform / OpenTofu | >= 1.10 |
-| Outscale Provider | ~> 1.8 |
+| Outscale Provider | ~> 1.9 |
 
 ## Usage
 
@@ -170,11 +172,28 @@ module "oks" {
 4. State files contain kubeconfig in plaintext — use encrypted remote backends
 5. See [SECURITY.md](SECURITY.md) for detailed security guidelines
 
+## Upgrade Notes
+
+### v2.0.0
+
+- **Breaking**: the Outscale provider constraint is raised from `~> 1.8` to `~> 1.9` (needed for the `field_manager` argument of `outscale_oks_manifest`). Bump `outscale/outscale` to 1.9.x in your root module and run `tofu init -upgrade`.
+- No input, output or resource address changes and no state migration: every new input is optional and defaults to `null`, so existing configurations plan without a diff.
+
+## Optional Cluster and Node Pool Settings
+
+All settings below default to `null` (not sent, the server or provider default applies).
+
+- `clusters[*].auto_maintenances`: patch and minor upgrade windows (`week_day` Mon..Sun, `start_hour` 0..23, `duration_hours`, `tz`, `enabled`).
+- `clusters[*].admission_flags`: `enable_admission_plugins` / `disable_admission_plugins`.
+- `clusters[*].cp_subregions` and `clusters[*].cluster_dns`: **changing either forces replacement of the cluster** (and its node pools). Leaving them unset never does. The module does not check that the Subregions belong to the project region, that `cp_subregions` requires `enable_cp_multi_az`, or that `cluster_dns` lies in `cidr_service`; the API rejects invalid values.
+- `node_pools[*].wait_for`: wait after apply until the NodePool fields match, for example `{ fields = { "status.progress.ready" = "1" }, timeout = "20m" }`. `enable_wait_on_delete` waits for the deletion on destroy. `field_manager` sets the server-side apply manager.
+- `node_pools[*].skip_delete`: **orphans the NodePool on removal.** When `true`, removing the pool from `node_pools` or destroying it drops only the Terraform state; the NodePool and its nodes keep running (and billed) in the cluster, and re-adding the same name requires `terraform import` (`<cluster_id>,oks.dev/v1beta2,NodePool,<name>`). Apply `skip_delete = true` before removing the pool.
+
 ## Known Limitations
 
 1. The OKS API may still evolve
 2. The module does not validate that `cidr`, `cidr_pods`, and `cidr_service` do not overlap
-3. Node pools are applied with server-side apply; `terraform apply` returns once the NodePool object is accepted, not when its nodes are ready
+3. Node pools are applied with server-side apply; `terraform apply` returns once the NodePool object is accepted, not when its nodes are ready, unless the node pool sets `wait_for`
 4. OKS autoscaling is in beta — behavior may change
 
 <!-- BEGIN_TF_DOCS -->
@@ -183,13 +202,13 @@ module "oks" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.10 |
-| <a name="requirement_outscale"></a> [outscale](#requirement\_outscale) | ~> 1.8 |
+| <a name="requirement_outscale"></a> [outscale](#requirement\_outscale) | ~> 1.9 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_outscale"></a> [outscale](#provider\_outscale) | ~> 1.8 |
+| <a name="provider_outscale"></a> [outscale](#provider\_outscale) | ~> 1.9 |
 
 ## Modules
 
@@ -209,9 +228,9 @@ No modules.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_clusters"></a> [clusters](#input\_clusters) | Map of OKS clusters to create. Keys are logical identifiers. Each cluster references a project via project\_key | <pre>map(object({<br/>    name                              = string<br/>    project_key                       = string<br/>    kubernetes_version                = string<br/>    cidr_pods                         = string<br/>    cidr_service                      = string<br/>    admin_whitelist                   = list(string)<br/>    control_planes                    = optional(string, "cp.3.masters.small")<br/>    description                       = optional(string)<br/>    enable_cp_multi_az                = optional(bool, false)<br/>    enable_admin_lbu                  = optional(bool, false)<br/>    enable_api_termination_protection = optional(bool, false)<br/>    enable_kubeconfig                 = optional(bool, true)<br/>    kubeconfig_user                   = optional(string)<br/>    kubeconfig_group                  = optional(string)<br/>    kubeconfig_ttl                    = optional(string)<br/>    kubeconfig_x_encrypt_nacl         = optional(string)<br/>    tags                              = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_clusters"></a> [clusters](#input\_clusters) | Map of OKS clusters to create. Keys are logical identifiers. Each cluster references a project via project\_key. Optional auto\_maintenances, cp\_subregions, admission\_flags and cluster\_dns are only sent when set; changing cp\_subregions or cluster\_dns forces replacement of the cluster | <pre>map(object({<br/>    name                              = string<br/>    project_key                       = string<br/>    kubernetes_version                = string<br/>    cidr_pods                         = string<br/>    cidr_service                      = string<br/>    admin_whitelist                   = list(string)<br/>    control_planes                    = optional(string, "cp.3.masters.small")<br/>    description                       = optional(string)<br/>    enable_cp_multi_az                = optional(bool, false)<br/>    enable_admin_lbu                  = optional(bool, false)<br/>    enable_api_termination_protection = optional(bool, false)<br/>    enable_kubeconfig                 = optional(bool, true)<br/>    kubeconfig_user                   = optional(string)<br/>    kubeconfig_group                  = optional(string)<br/>    kubeconfig_ttl                    = optional(string)<br/>    kubeconfig_x_encrypt_nacl         = optional(string)<br/>    # null = not sent, the server applies its defaults. Windows: week_day is Mon..Sun, start_hour 0..23.<br/>    auto_maintenances = optional(object({<br/>      minor_upgrade_maintenance = optional(object({<br/>        enabled        = optional(bool)<br/>        duration_hours = optional(number)<br/>        start_hour     = optional(number)<br/>        tz             = optional(string)<br/>        week_day       = optional(string)<br/>      }))<br/>      patch_upgrade_maintenance = optional(object({<br/>        enabled        = optional(bool)<br/>        duration_hours = optional(number)<br/>        start_hour     = optional(number)<br/>        tz             = optional(string)<br/>        week_day       = optional(string)<br/>      }))<br/>    }))<br/>    # Subregions of the control plane, e.g. ["eu-west-2a", "eu-west-2b"]. Changing it forces replacement of the cluster.<br/>    cp_subregions = optional(set(string))<br/>    admission_flags = optional(object({<br/>      enable_admission_plugins  = optional(set(string))<br/>      disable_admission_plugins = optional(set(string))<br/>    }))<br/>    # IPv4 of the cluster DNS service. Changing it forces replacement of the cluster.<br/>    cluster_dns = optional(string)<br/>    tags        = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
 | <a name="input_enable_quotas"></a> [enable\_quotas](#input\_enable\_quotas) | Enable retrieval of OKS account quotas data source | `bool` | `false` | no |
-| <a name="input_node_pools"></a> [node\_pools](#input\_node\_pools) | Map of OKS node pools to create. Keys are logical identifiers. Each node pool references a cluster via cluster\_key | <pre>map(object({<br/>    name                = string<br/>    cluster_key         = string<br/>    node_type           = string<br/>    desired_nodes       = number<br/>    zones               = list(string)<br/>    min_nodes           = optional(number)<br/>    max_nodes           = optional(number)<br/>    enable_autoscaling  = optional(bool, false)<br/>    enable_auto_healing = optional(bool, false)<br/>    volumes = optional(list(object({<br/>      device = string<br/>      type   = string<br/>      size   = number<br/>      iops   = optional(number)<br/>      dir    = optional(string)<br/>    })), [])<br/>    extra_spec = optional(any, {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_node_pools"></a> [node\_pools](#input\_node\_pools) | Map of OKS node pools to create. Keys are logical identifiers. Each node pool references a cluster via cluster\_key. Optional wait\_for, enable\_wait\_on\_delete, field\_manager and skip\_delete are only sent when set; skip\_delete = true leaves the NodePool running in the cluster when the pool is removed (apply it before removal) | <pre>map(object({<br/>    name                = string<br/>    cluster_key         = string<br/>    node_type           = string<br/>    desired_nodes       = number<br/>    zones               = list(string)<br/>    min_nodes           = optional(number)<br/>    max_nodes           = optional(number)<br/>    enable_autoscaling  = optional(bool, false)<br/>    enable_auto_healing = optional(bool, false)<br/>    volumes = optional(list(object({<br/>      device = string<br/>      type   = string<br/>      size   = number<br/>      iops   = optional(number)<br/>      dir    = optional(string)<br/>    })), [])<br/>    # null = not sent, the provider default applies.<br/>    # wait_for: after apply, wait until every JSONPath field of the object matches its regex, e.g. { "status.progress.ready" = "1" }.<br/>    wait_for = optional(object({<br/>      fields  = map(string)<br/>      timeout = optional(string)<br/>    }))<br/>    # Wait for the NodePool object to be deleted on destroy.<br/>    enable_wait_on_delete = optional(bool)<br/>    # Server-side apply field manager.<br/>    field_manager = optional(object({<br/>      name            = optional(string)<br/>      force_conflicts = optional(bool)<br/>    }))<br/>    # true: destroying or removing the pool only drops it from the state; the NodePool and its nodes stay in the cluster (orphaned).<br/>    # Apply skip_delete = true BEFORE removing the pool, otherwise the object is deleted.<br/>    skip_delete = optional(bool)<br/>    extra_spec  = optional(any, {})<br/>  }))</pre> | `{}` | no |
 | <a name="input_projects"></a> [projects](#input\_projects) | Map of OKS projects to create. Keys are logical identifiers used to reference projects from clusters | <pre>map(object({<br/>    name                              = string<br/>    cidr                              = string<br/>    region                            = string<br/>    description                       = optional(string)<br/>    enable_api_termination_protection = optional(bool, false)<br/>    tags                              = optional(map(string), {})<br/>  }))</pre> | n/a | yes |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to apply to all OKS resources. Merged with module-managed tags | `map(string)` | `{}` | no |
 
@@ -272,7 +291,7 @@ This module is provided "as is" without warranty of any kind. Use at your own ri
 [terraform-badge]: https://img.shields.io/badge/Terraform-%3E%3D1.10-623CE4
 [terraform-url]: https://www.terraform.io
 
-[provider-badge]: https://img.shields.io/badge/Outscale%20Provider-~%3E1.8-orange
+[provider-badge]: https://img.shields.io/badge/Outscale%20Provider-~%3E1.9-orange
 [provider-url]: https://registry.terraform.io/providers/outscale/outscale/latest
 
 [release-badge]: https://img.shields.io/gitlab/v/release/leminnov/terraform/modules/outscale-oks?include_prereleases&sort=semver

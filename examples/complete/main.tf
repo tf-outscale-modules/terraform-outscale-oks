@@ -4,7 +4,7 @@ terraform {
   required_providers {
     outscale = {
       source  = "outscale/outscale"
-      version = "~> 1.8"
+      version = "~> 1.9"
     }
   }
 }
@@ -73,6 +73,14 @@ module "oks" {
       enable_admin_lbu                  = true
       enable_api_termination_protection = false
       kubeconfig_ttl                    = "24h"
+
+      # Opt-in options; cp_subregions and cluster_dns force replacement of the cluster when changed
+      auto_maintenances = {
+        patch_upgrade_maintenance = { week_day = "Sun", start_hour = 3, duration_hours = 2, tz = "Europe/Paris" }
+      }
+      cp_subregions   = ["eu-west-2a", "eu-west-2b"]
+      cluster_dns     = "10.92.0.10"
+      admission_flags = { enable_admission_plugins = ["NodeRestriction"] }
       tags = {
         Team = "platform"
       }
@@ -90,6 +98,14 @@ module "oks" {
       min_nodes           = 2
       max_nodes           = 5
       enable_auto_healing = true
+
+      wait_for = {
+        fields  = { "status.progress.ready" = "2" }
+        timeout = "20m"
+      }
+      enable_wait_on_delete = true
+      field_manager         = { name = "platform-team" }
+      # skip_delete = true would leave the NodePool running in the cluster when removed from Terraform
     }
   }
 
